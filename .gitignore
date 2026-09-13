@@ -7,3 +7,4 @@ dist/
 .idea/
 .DS_Store
 release-notes.txt
+release-body.txt

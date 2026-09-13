@@ -25,8 +25,8 @@
 > **Jellyfin 12 only.** The plugin uses APIs that do not exist in 10.x.
 
 <p align="center">
-  <img alt="Avatar badge and profile-menu entry" src="docs/screenshots/badge.jpg" width="45%" />
-  <img alt="Plugin Updates dashboard page" src="docs/screenshots/dashboard.png" width="45%" />
+  <img alt="Avatar badge and profile-menu entry" src="docs/images/badge.jpg" width="45%" />
+  <img alt="Plugin Updates dashboard page" src="docs/images/dashboard.png" width="45%" />
 </p>
 
 ## ✨ Features

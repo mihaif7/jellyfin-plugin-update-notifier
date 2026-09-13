@@ -58,7 +58,8 @@ public class UpdateTracker
     /// <param name="name">The plugin name.</param>
     /// <param name="newVersion">The newly installed version.</param>
     /// <param name="changelog">The changelog, if supplied by the repository.</param>
-    public void RecordUpdate(Guid id, string name, string newVersion, string? changelog)
+    /// <param name="sourceUrl">The URL the package was installed from, if known.</param>
+    public void RecordUpdate(Guid id, string name, string newVersion, string? changelog, string? sourceUrl)
     {
         _preInstallVersions.TryRemove(id, out var oldVersion);
 
@@ -73,6 +74,7 @@ public class UpdateTracker
                 OldVersion = oldVersion,
                 NewVersion = newVersion,
                 Changelog = changelog,
+                SourceUrl = sourceUrl,
                 // Jellyfin's own isUpdate flag is only true when the same version
                 // is reinstalled, so derive it from what was installed before.
                 IsUpdate = oldVersion is not null

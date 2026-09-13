@@ -65,7 +65,7 @@ public class PluginUpdateEventConsumer :
     {
         ArgumentNullException.ThrowIfNull(eventArgs);
         var info = eventArgs.Argument;
-        _tracker.RecordUpdate(info.Id, info.Name, info.Version.ToString(), info.Changelog);
+        _tracker.RecordUpdate(info.Id, info.Name, info.Version.ToString(), info.Changelog, info.SourceUrl);
         _logger.LogInformation("Recorded plugin change: {Name} {Version}", info.Name, info.Version);
         return Task.CompletedTask;
     }
@@ -75,7 +75,7 @@ public class PluginUpdateEventConsumer :
     {
         ArgumentNullException.ThrowIfNull(eventArgs);
         var info = eventArgs.Argument;
-        _tracker.RecordUpdate(info.Id, info.Name, info.Version.ToString(), info.Changelog);
+        _tracker.RecordUpdate(info.Id, info.Name, info.Version.ToString(), info.Changelog, info.SourceUrl);
         _logger.LogInformation("Recorded plugin change: {Name} {Version}", info.Name, info.Version);
         return Task.CompletedTask;
     }

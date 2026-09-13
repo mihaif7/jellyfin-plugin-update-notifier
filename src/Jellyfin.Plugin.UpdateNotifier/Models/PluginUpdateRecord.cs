@@ -22,6 +22,9 @@ public class PluginUpdateRecord
     /// <summary>Gets or sets the changelog supplied by the repository.</summary>
     public string? Changelog { get; set; }
 
+    /// <summary>Gets or sets the URL the package was installed from, if known.</summary>
+    public string? SourceUrl { get; set; }
+
     /// <summary>Gets or sets a value indicating whether this replaced an existing install.</summary>
     public bool IsUpdate { get; set; }
 

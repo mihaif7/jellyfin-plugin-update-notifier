@@ -121,10 +121,25 @@
             }
             #UpdateNotifierPage .pun-card-body { padding: 18px 24px 20px; }
             #UpdateNotifierPage .pun-meta {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
                 color: var(--pun-text-subtle);
                 font-size: 0.85em;
                 margin-bottom: 10px;
             }
+            #UpdateNotifierPage .pun-source {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                color: var(--primary-accent-color, #00a4dc);
+                text-decoration: none;
+                font-weight: 600;
+            }
+            #UpdateNotifierPage .pun-source:hover { text-decoration: underline; }
+            #UpdateNotifierPage .pun-source-icon { font-size: 15px !important; }
 
             /* Changelogs are markdown. Jellyfin's .fieldDescription forces
                white-space:normal !important, so they are rendered into real
@@ -255,6 +270,25 @@
                     return 'Installed <span class="pun-new">' + esc(u.NewVersion) + '</span>';
                 }
 
+                // Turns the install source URL into a card link. GitHub sources
+                // (release downloads or raw content) collapse to the repository
+                // and are labelled "GitHub"; any other http(s) source links to
+                // its origin and is labelled "Source".
+                function sourceLink(url) {
+                    if (!url) return null;
+                    var gh = /^https?:\/\/(?:www\.)?(?:github\.com|raw\.githubusercontent\.com)\/([A-Za-z0-9._-]+)\/([A-Za-z0-9._-]+)/i.exec(url);
+                    if (gh) {
+                        return { href: 'https://github.com/' + gh[1] + '/' + gh[2], label: 'GitHub' };
+                    }
+                    try {
+                        var u = new URL(url);
+                        if (u.protocol === 'http:' || u.protocol === 'https:') {
+                            return { href: u.origin, label: 'Source' };
+                        }
+                    } catch (e) { /* not a parseable URL */ }
+                    return null;
+                }
+
                 function render(status) {
                     var updates = status.Updates || [];
                     var summary = page.querySelector('#punSummary');
@@ -282,6 +316,13 @@
 
                     list.innerHTML = updates.map(function (u) {
                         var when = u.TimestampUtc ? new Date(u.TimestampUtc).toLocaleString() : '';
+                        var link = sourceLink(u.SourceUrl);
+                        var linkHtml = link
+                            ? '<a class="pun-source" href="' + esc(link.href) + '" target="_blank" rel="noopener noreferrer">'
+                                + esc(link.label)
+                                + '<span class="material-icons pun-source-icon" aria-hidden="true">open_in_new</span></a>'
+                            : '';
+                        var meta = (when ? '<span>' + esc(when) + '</span>' : '') + linkHtml;
                         return '<div class="pun-card">'
                             + '<div class="pun-card-head">'
                             + '<span class="material-icons pun-card-icon" aria-hidden="true">extension</span>'
@@ -289,7 +330,7 @@
                             + '<span class="pun-card-version">' + versionLine(u) + '</span>'
                             + '</div>'
                             + '<div class="pun-card-body">'
-                            + (when ? '<div class="pun-meta">' + esc(when) + '</div>' : '')
+                            + (meta ? '<div class="pun-meta">' + meta + '</div>' : '')
                             + renderChangelog(u.Changelog)
                             + '</div>'
                             + '</div>';

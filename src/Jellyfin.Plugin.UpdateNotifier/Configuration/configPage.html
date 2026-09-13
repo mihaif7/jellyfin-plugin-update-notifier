@@ -161,6 +161,13 @@
             }
 
             #UpdateNotifierPage .pun-footer { margin-top: 24px; }
+            #UpdateNotifierPage .pun-dismiss-hint {
+                margin: 10px 0 0;
+                max-width: 640px;
+                color: var(--pun-text-subtle);
+                font-size: 0.85em;
+                line-height: 1.5;
+            }
 
             #UpdateNotifierPage .pun-empty {
                 display: flex;
@@ -208,6 +215,10 @@
                         <button is="emby-button" type="button" id="punDismiss" class="raised" style="display:none;">
                             <span>Dismiss notification</span>
                         </button>
+                        <p class="pun-dismiss-hint" id="punDismissHint" style="display:none;">
+                            Hides the badge on your avatar and the profile-menu entry. The restart reminder and the list
+                            below stay until you restart, and the badge returns if another plugin is installed or updated.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -294,6 +305,7 @@
                     var summary = page.querySelector('#punSummary');
                     var notice = page.querySelector('#punRestartNotice');
                     var dismiss = page.querySelector('#punDismiss');
+                    var dismissHint = page.querySelector('#punDismissHint');
                     var list = page.querySelector('#punList');
 
                     if (!updates.length) {
@@ -304,6 +316,7 @@
                             + '</div>';
                         notice.style.display = 'none';
                         dismiss.style.display = 'none';
+                        dismissHint.style.display = 'none';
                         return;
                     }
 
@@ -312,7 +325,9 @@
                         : updates.length + ' plugins have changed since the last restart.';
 
                     notice.style.display = status.PendingRestart ? 'flex' : 'none';
-                    dismiss.style.display = (status.PendingRestart && !status.Dismissed) ? 'inline-block' : 'none';
+                    var canDismiss = status.PendingRestart && !status.Dismissed;
+                    dismiss.style.display = canDismiss ? 'inline-block' : 'none';
+                    dismissHint.style.display = canDismiss ? 'block' : 'none';
 
                     list.innerHTML = updates.map(function (u) {
                         var when = u.TimestampUtc ? new Date(u.TimestampUtc).toLocaleString() : '';
@@ -361,16 +376,25 @@
                     }).then(load);
                 });
 
-                page.querySelector('#punRestart').addEventListener('click', function () {
-                    if (!window.confirm('Restart the Jellyfin server now?')) {
-                        return;
-                    }
+                function restartServer() {
                     // Jellyfin 12 dropped Dashboard.restartServer(); the apiclient
                     // method hits System/Restart, with a direct fallback.
                     if (typeof ApiClient.restartServer === 'function') {
                         ApiClient.restartServer();
                     } else {
                         ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('System/Restart') });
+                    }
+                }
+
+                page.querySelector('#punRestart').addEventListener('click', function () {
+                    // Reuse Jellyfin's own confirm dialog rather than the native
+                    // browser one, matching the dashboard's wording.
+                    if (window.Dashboard && typeof Dashboard.confirm === 'function') {
+                        Dashboard.confirm('Are you sure you wish to restart Jellyfin?', 'Restart', function (confirmed) {
+                            if (confirmed) restartServer();
+                        });
+                    } else if (window.confirm('Are you sure you wish to restart Jellyfin?')) {
+                        restartServer();
                     }
                 });
             })();

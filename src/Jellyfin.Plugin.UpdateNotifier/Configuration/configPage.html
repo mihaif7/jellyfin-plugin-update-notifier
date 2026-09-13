@@ -168,6 +168,39 @@
                 font-size: 0.85em;
                 line-height: 1.5;
             }
+            #UpdateNotifierPage .pun-modal {
+                position: fixed;
+                inset: 0;
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            #UpdateNotifierPage .pun-modal-backdrop {
+                position: absolute;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.55);
+            }
+            #UpdateNotifierPage .pun-modal-box {
+                position: relative;
+                width: min(92vw, 420px);
+                background: var(--pun-surface);
+                backdrop-filter: blur(18px);
+                -webkit-backdrop-filter: blur(18px);
+                border: 1px solid var(--pun-border-strong);
+                border-radius: 12px;
+                box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+                padding: 22px 24px 18px;
+            }
+            #UpdateNotifierPage .pun-modal-title { margin: 0 0 10px; font-size: 1.2em; font-weight: 600; }
+            #UpdateNotifierPage .pun-modal-text { margin: 0 0 22px; color: var(--pun-text-muted); line-height: 1.5; }
+            #UpdateNotifierPage .pun-modal-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+            #UpdateNotifierPage .pun-modal-actions .button-flat { background: transparent; margin: 0; }
+            #UpdateNotifierPage .pun-modal-danger { background: #cc3333; margin: 0; }
 
             #UpdateNotifierPage .pun-empty {
                 display: flex;
@@ -219,6 +252,18 @@
                             Hides the badge on your avatar and the profile-menu entry. The restart reminder and the list
                             below stay until you restart, and the badge returns if another plugin is installed or updated.
                         </p>
+                    </div>
+
+                    <div id="punConfirm" class="pun-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="punConfirmTitle">
+                        <div class="pun-modal-backdrop" id="punConfirmBackdrop"></div>
+                        <div class="pun-modal-box" role="document">
+                            <h3 class="pun-modal-title" id="punConfirmTitle">Restart</h3>
+                            <p class="pun-modal-text">Are you sure you wish to restart Jellyfin?</p>
+                            <div class="pun-modal-actions">
+                                <button is="emby-button" type="button" class="button-flat" id="punConfirmCancel"><span>Cancel</span></button>
+                                <button is="emby-button" type="button" class="raised pun-modal-danger" id="punConfirmOk"><span>Restart</span></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -386,16 +431,20 @@
                     }
                 }
 
+                var confirmModal = page.querySelector('#punConfirm');
+
+                function closeConfirm() {
+                    confirmModal.style.display = 'none';
+                }
+
                 page.querySelector('#punRestart').addEventListener('click', function () {
-                    // Reuse Jellyfin's own confirm dialog rather than the native
-                    // browser one, matching the dashboard's wording.
-                    if (window.Dashboard && typeof Dashboard.confirm === 'function') {
-                        Dashboard.confirm('Are you sure you wish to restart Jellyfin?', 'Restart', function (confirmed) {
-                            if (confirmed) restartServer();
-                        });
-                    } else if (window.confirm('Are you sure you wish to restart Jellyfin?')) {
-                        restartServer();
-                    }
+                    confirmModal.style.display = 'flex';
+                });
+                page.querySelector('#punConfirmCancel').addEventListener('click', closeConfirm);
+                page.querySelector('#punConfirmBackdrop').addEventListener('click', closeConfirm);
+                page.querySelector('#punConfirmOk').addEventListener('click', function () {
+                    closeConfirm();
+                    restartServer();
                 });
             })();
         </script>

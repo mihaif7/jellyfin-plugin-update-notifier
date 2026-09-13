@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/mihaif7/jellyfin-plugin-updatenotifier/main/docs/images/logo.png",
     "versions": [
       {
+        "version": "1.1.0.0",
+        "changelog": "## ✨ New Features\n\n- **Plugin icon** — the plugin now has its own icon in the catalog and in your plugin list, instead of a blank placeholder.\n\n## 🐞 Bug Fixes\n\n- **Readable changelogs** — a plugin's release notes on the **Plugin Updates** page now appear properly formatted. Bold text, headings and links show as intended, instead of displaying the raw formatting characters around them.\n\n## 📋 Notes\n\n- Nothing to reconfigure — updating takes only the usual restart.\n- Still Jellyfin 12 only. The avatar badge and profile-menu entry need the [JavaScript Injector](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector) plugin; the dashboard page works without it.\n\n",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/mihaif7/jellyfin-plugin-updatenotifier/releases/download/v1.1.0.0/updatenotifier_1.1.0.0.zip",
+        "checksum": "5503252100f57cad5c53f57a244321ec",
+        "timestamp": "2026-09-13T21:14:29.0000000Z"
+      },
+      {
         "version": "1.0.0.0",
         "changelog": "## Plugin Update Notifier 1.0.0.0\n\nFirst release, for Jellyfin 12.\n\nJellyfin installs plugin updates in place but only applies them on the next server restart, and nothing in the UI tells an administrator that a restart is pending. This plugin closes that gap: it watches plugin install and update events and surfaces a clear, dismissible reminder until the server is restarted.\n\n### Features\n\n- Avatar badge — a dot appears on the admin's profile avatar the moment a plugin change leaves a restart pending.\n- Profile-menu entry — a \"Plugin Updates\" item in the user dropdown, shown only to administrators, with a count of what changed.\n- Dashboard page — lists every changed plugin, its old and new version, the release changelog, and a link to each plugin's source.\n- Shared dismiss — dismissing hides the reminder for every admin session, not just one browser; a later plugin change brings it back.\n- Self-clearing — the reminder disappears on its own after the restart it was asking for.\n\n### Requirements\n\n- Jellyfin 12 (this release uses APIs not present in 10.x).\n- The avatar badge and profile-menu entry additionally require the [JavaScript Injector](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector) plugin (4.0.0.0 or newer). The dashboard page works without it.",
         "targetAbi": "12.0.0.0",

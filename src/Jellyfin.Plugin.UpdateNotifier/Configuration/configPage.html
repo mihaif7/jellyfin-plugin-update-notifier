@@ -362,7 +362,16 @@
                 });
 
                 page.querySelector('#punRestart').addEventListener('click', function () {
-                    Dashboard.restartServer();
+                    if (!window.confirm('Restart the Jellyfin server now?')) {
+                        return;
+                    }
+                    // Jellyfin 12 dropped Dashboard.restartServer(); the apiclient
+                    // method hits System/Restart, with a direct fallback.
+                    if (typeof ApiClient.restartServer === 'function') {
+                        ApiClient.restartServer();
+                    } else {
+                        ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('System/Restart') });
+                    }
                 });
             })();
         </script>

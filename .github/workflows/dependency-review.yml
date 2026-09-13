@@ -10,6 +10,10 @@ permissions:
 jobs:
   dependency-review:
     runs-on: ubuntu-latest
+    # The dependency graph this relies on needs GitHub Advanced Security on a
+    # private repo; it is free on public repos. Skip while private. This job
+    # runs on pull_request only, where repository.visibility is populated.
+    if: github.event.repository.visibility == 'public'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

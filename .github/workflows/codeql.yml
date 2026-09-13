@@ -13,8 +13,27 @@ permissions:
   contents: read
 
 jobs:
+  # Code scanning needs GitHub Advanced Security, which is only available for
+  # free on public repositories. Skip the analysis while the repo is private
+  # (querying the API here so it also works for schedule/workflow_dispatch,
+  # whose events do not carry repository.visibility).
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      public: ${{ steps.check.outputs.public }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          vis="$(gh api "repos/${{ github.repository }}" --jq '.visibility')"
+          if [ "$vis" = "public" ]; then echo "public=true" >> "$GITHUB_OUTPUT"; else echo "public=false" >> "$GITHUB_OUTPUT"; fi
+
   analyze:
     name: Analyze (${{ matrix.language }})
+    needs: gate
+    if: needs.gate.outputs.public == 'true'
     runs-on: ubuntu-latest
     permissions:
       security-events: write

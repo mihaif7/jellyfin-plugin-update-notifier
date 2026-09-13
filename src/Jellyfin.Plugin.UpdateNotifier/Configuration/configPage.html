@@ -138,7 +138,7 @@
                 text-decoration: none;
                 font-weight: 600;
             }
-            #UpdateNotifierPage .pun-source:hover { text-decoration: underline; }
+            #UpdateNotifierPage .pun-source:hover .pun-source-label { text-decoration: underline; }
             #UpdateNotifierPage .pun-source-icon { font-size: 15px !important; }
 
             /* Changelogs are markdown. Jellyfin's .fieldDescription forces
@@ -319,7 +319,7 @@
                         var link = sourceLink(u.SourceUrl);
                         var linkHtml = link
                             ? '<a class="pun-source" href="' + esc(link.href) + '" target="_blank" rel="noopener noreferrer">'
-                                + esc(link.label)
+                                + '<span class="pun-source-label">' + esc(link.label) + '</span>'
                                 + '<span class="material-icons pun-source-icon" aria-hidden="true">open_in_new</span></a>'
                             : '';
                         var meta = (when ? '<span>' + esc(when) + '</span>' : '') + linkHtml;

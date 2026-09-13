@@ -117,11 +117,16 @@ jobs:
                assemblies: [$dll]
              }' manifest.json > "$OUT_DIR/meta.json"
 
-          mkdir -p dist
-          (cd "$OUT_DIR" && zip -j "$GITHUB_WORKSPACE/dist/$ZIP" "$ASSEMBLY" meta.json)
+          DIST="$GITHUB_WORKSPACE/dist"
+          mkdir -p "$DIST"
+          # Create the archive with a relative name inside the output dir, then
+          # move it: the runner's zip mishandles an absolute archive path.
+          ( cd "$OUT_DIR" && rm -f "$ZIP" && zip -j "$ZIP" "$ASSEMBLY" meta.json )
+          mv "$OUT_DIR/$ZIP" "$DIST/$ZIP"
+          test -f "$DIST/$ZIP"
 
           {
-            echo "checksum=$(md5sum "dist/$ZIP" | cut -d' ' -f1)"
+            echo "checksum=$(md5sum "$DIST/$ZIP" | cut -d' ' -f1)"
             echo "timestamp=$TS"
           } >> "$GITHUB_OUTPUT"
 
@@ -160,4 +165,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.v.outputs.tag }}
           ZIP: ${{ steps.v.outputs.zip }}
-        run: gh release upload "$TAG" "dist/$ZIP" --clobber
+        run: gh release upload "$TAG" "$GITHUB_WORKSPACE/dist/$ZIP" --clobber

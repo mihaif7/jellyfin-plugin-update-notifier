@@ -155,6 +155,18 @@
             #UpdateNotifierPage .punLogList { margin: 0.2em 0; padding-left: 1.3em; }
             #UpdateNotifierPage .punLogList li { margin: 0.25em 0; }
             #UpdateNotifierPage .punLogP { margin: 0.35em 0; }
+            #UpdateNotifierPage .punLog strong { color: inherit; opacity: 0.95; font-weight: 600; }
+            #UpdateNotifierPage .punLog a {
+                color: var(--primary-accent-color, #00a4dc);
+                text-decoration: none;
+            }
+            #UpdateNotifierPage .punLog a:hover { text-decoration: underline; }
+            #UpdateNotifierPage .punLog code {
+                background: var(--pun-border);
+                border-radius: 4px;
+                padding: 0.1em 0.35em;
+                font-size: 0.92em;
+            }
             #UpdateNotifierPage .punLogNone {
                 color: var(--pun-text-subtle);
                 font-style: italic;
@@ -279,6 +291,32 @@
                     });
                 }
 
+                // Renders the inline markdown a changelog line can carry: bold,
+                // italic, code spans and links. The text is HTML escaped first,
+                // so every pattern below can only ever match literal markdown,
+                // and a link's href is escaped before it reaches the attribute.
+                function inline(text) {
+                    var s = esc(text);
+
+                    // Code spans are lifted out first so their contents are not
+                    // re-processed as emphasis.
+                    var codes = [];
+                    s = s.replace(/`([^`]+)`/g, function (m, code) {
+                        codes.push(code);
+                        return '\u0000' + (codes.length - 1) + '\u0000';
+                    });
+
+                    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi,
+                        '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+                    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                    s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+                    s = s.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+
+                    return s.replace(/\u0000(\d+)\u0000/g, function (m, i) {
+                        return '<code>' + codes[i] + '</code>';
+                    });
+                }
+
                 // Jellyfin themes are swapped wholesale at runtime, so sniff the
                 // rendered background rather than trusting a class name.
                 function markTheme() {
@@ -305,13 +343,13 @@
 
                         if (/^#{1,6}\s/.test(t)) {
                             if (inList) { html += '</ul>'; inList = false; }
-                            html += '<div class="punLogHead">' + esc(t.replace(/^#{1,6}\s*/, '')) + '</div>';
+                            html += '<div class="punLogHead">' + inline(t.replace(/^#{1,6}\s*/, '')) + '</div>';
                         } else if (/^[-*]\s+/.test(t)) {
                             if (!inList) { html += '<ul class="punLogList">'; inList = true; }
-                            html += '<li>' + esc(t.replace(/^[-*]\s+/, '')) + '</li>';
+                            html += '<li>' + inline(t.replace(/^[-*]\s+/, '')) + '</li>';
                         } else {
                             if (inList) { html += '</ul>'; inList = false; }
-                            html += '<div class="punLogP">' + esc(t) + '</div>';
+                            html += '<div class="punLogP">' + inline(t) + '</div>';
                         }
                     });
                     if (inList) html += '</ul>';

@@ -2,6 +2,10 @@
 <h2 align="center">A Jellyfin Plugin</h2>
 
 <p align="center">
+  <img alt="Plugin Update Notifier" src="docs/images/logo.png" width="70%" />
+</p>
+
+<p align="center">
   Badges the admin avatar and adds a profile-menu entry when plugins have been
   updated and the server needs a restart — with a dashboard page listing what
   changed and each release's changelog.
@@ -24,15 +28,10 @@
 > [!NOTE]
 > **Jellyfin 12 only.** The plugin uses APIs that do not exist in 10.x.
 
-<!--
-Screenshots — drop the PNGs into docs/screenshots/ and uncomment. Big plugins
-lead with a couple of images; you already captured these while testing.
-
 <p align="center">
-  <img alt="Avatar badge and profile-menu entry" src="docs/screenshots/badge.png" width="45%" />
-  <img alt="Plugin Updates dashboard page" src="docs/screenshots/dashboard.png" width="45%" />
+  <img alt="Avatar badge and profile-menu entry" src="docs/images/badge.jpg" width="45%" />
+  <img alt="Plugin Updates dashboard page" src="docs/images/dashboard.png" width="45%" />
 </p>
--->
 
 ## ✨ Features
 

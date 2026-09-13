@@ -4,9 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Jellyfin.Plugin.UpdateNotifier.Models;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.UpdateNotifier;
+namespace Jellyfin.Plugin.UpdateNotifier.Services;
 
 /// <summary>
 /// Tracks plugin updates and persists them to the plugin data folder.

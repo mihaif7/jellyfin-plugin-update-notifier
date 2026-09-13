@@ -1,10 +1,12 @@
 using System.Net.Mime;
+using Jellyfin.Plugin.UpdateNotifier.Models;
+using Jellyfin.Plugin.UpdateNotifier.Services;
 using MediaBrowser.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Jellyfin.Plugin.UpdateNotifier;
+namespace Jellyfin.Plugin.UpdateNotifier.Controllers;
 
 /// <summary>
 /// API endpoints for the plugin update notifier.

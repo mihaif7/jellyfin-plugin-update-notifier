@@ -1,6 +1,6 @@
 using System;
 
-namespace Jellyfin.Plugin.UpdateNotifier;
+namespace Jellyfin.Plugin.UpdateNotifier.Models;
 
 /// <summary>
 /// A single recorded plugin install or update.

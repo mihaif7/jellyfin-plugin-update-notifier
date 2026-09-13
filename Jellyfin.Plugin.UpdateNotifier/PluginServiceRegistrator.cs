@@ -1,3 +1,6 @@
+using Jellyfin.Plugin.UpdateNotifier.EventConsumers;
+using Jellyfin.Plugin.UpdateNotifier.ScheduledTasks;
+using Jellyfin.Plugin.UpdateNotifier.Services;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Events.Updates;

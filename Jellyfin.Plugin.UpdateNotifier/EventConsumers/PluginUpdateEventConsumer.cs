@@ -1,11 +1,12 @@
 using System;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.UpdateNotifier.Services;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Events.Updates;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.UpdateNotifier;
+namespace Jellyfin.Plugin.UpdateNotifier.EventConsumers;
 
 /// <summary>
 /// Consumes plugin installation lifecycle events.

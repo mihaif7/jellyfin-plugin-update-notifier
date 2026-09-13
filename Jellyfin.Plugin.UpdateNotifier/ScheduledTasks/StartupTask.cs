@@ -5,11 +5,13 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.UpdateNotifier.Helpers;
+using Jellyfin.Plugin.UpdateNotifier.Services;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
-namespace Jellyfin.Plugin.UpdateNotifier;
+namespace Jellyfin.Plugin.UpdateNotifier.ScheduledTasks;
 
 /// <summary>
 /// Runs at server startup to register the dashboard page and the client script.

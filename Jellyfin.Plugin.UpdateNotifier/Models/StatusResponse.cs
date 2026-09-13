@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Jellyfin.Plugin.UpdateNotifier;
+namespace Jellyfin.Plugin.UpdateNotifier.Models;
 
 /// <summary>
 /// The payload returned by the status endpoint.

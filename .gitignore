@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+*.user
+*.suo
+.vs/
+.idea/
+.DS_Store
+release-notes.txt

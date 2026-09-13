@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Plugin Updates</title>
+</head>
+<body>
+    <div id="UpdateNotifierPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-button">
+        <style>
+            /* Jellyfin ships several themes that each swap a whole theme.css with
+               hardcoded colours, so there is no variable contract to lean on. Define
+               a small local palette with dark defaults, and flip it under a light OS
+               preference unless a Jellyfin dark theme is already in play. Text stays
+               `inherit` so it remains legible whatever the theme sets. */
+            #UpdateNotifierPage {
+                --pun-surface:       rgba(22, 22, 22, 0.94);
+                --pun-border:        rgba(255, 255, 255, 0.08);
+                --pun-border-strong: rgba(255, 255, 255, 0.12);
+                --pun-text-muted:    rgba(255, 255, 255, 0.6);
+                --pun-text-subtle:   rgba(255, 255, 255, 0.45);
+                --pun-head-gradient: linear-gradient(to left,
+                    color-mix(in srgb, var(--primary-accent-color, #00a4dc) 22%, transparent) 0%,
+                    rgba(255, 255, 255, 0.02) 100%);
+                --pun-shadow:        0 6px 22px rgba(0, 0, 0, 0.22);
+                color: inherit;
+            }
+
+            @media (prefers-color-scheme: light) {
+                #UpdateNotifierPage:not(.pun-dark) {
+                    --pun-surface:       rgba(255, 255, 255, 0.75);
+                    --pun-border:        rgba(0, 0, 0, 0.1);
+                    --pun-border-strong: rgba(0, 0, 0, 0.15);
+                    --pun-text-muted:    rgba(0, 0, 0, 0.65);
+                    --pun-text-subtle:   rgba(0, 0, 0, 0.5);
+                    --pun-head-gradient: linear-gradient(to left,
+                        color-mix(in srgb, var(--primary-accent-color, #00a4dc) 18%, transparent) 0%,
+                        rgba(0, 0, 0, 0.01) 100%);
+                    --pun-shadow:        0 6px 22px rgba(0, 0, 0, 0.1);
+                }
+            }
+
+            /* No max-width: .content-primary already supplies Jellyfin's standard
+               14.88px gutter on both sides, so the content lines up with every
+               other dashboard page and stays symmetric instead of stopping short
+               on the right. */
+            #UpdateNotifierPage .pun-wrap { width: 100%; }
+
+            #UpdateNotifierPage .pun-summary {
+                color: var(--pun-text-muted);
+                margin: 0 0 20px;
+            }
+
+            /* Banner: matches the Jellyfin Enhanced banner shape (8px radius,
+               4px accent rail, flex row with a leading icon). */
+            #UpdateNotifierPage .pun-banner {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                padding: 14px 20px;
+                border-radius: 8px;
+                border-left: 4px solid #ff6b6b;
+                background-color: rgba(220, 53, 69, 0.15);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                margin: 0 0 28px;
+            }
+            #UpdateNotifierPage .pun-banner-icon {
+                color: #ff6b6b;
+                font-size: 26px !important;
+                flex-shrink: 0;
+            }
+            #UpdateNotifierPage .pun-banner-body { flex: 1; min-width: 0; }
+            #UpdateNotifierPage .pun-banner-title { font-weight: 600; margin-bottom: 2px; }
+            #UpdateNotifierPage .pun-banner-text { color: var(--pun-text-muted); font-size: 0.92em; }
+            #UpdateNotifierPage .pun-banner .pun-restart-btn { flex-shrink: 0; margin: 0; }
+
+            /* Cards: Jellyfin Enhanced's fieldset treatment. */
+            #UpdateNotifierPage .pun-list {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            #UpdateNotifierPage .pun-card {
+                background: var(--pun-surface);
+                border: 1px solid var(--pun-border);
+                border-radius: 12px;
+                box-shadow: var(--pun-shadow);
+                overflow: hidden;
+                transition: border-color 0.2s ease, box-shadow 0.25s ease;
+            }
+            #UpdateNotifierPage .pun-card:hover {
+                border-color: var(--pun-border-strong);
+            }
+            #UpdateNotifierPage .pun-card-head {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+                padding: 14px 22px;
+                background: var(--pun-head-gradient);
+                border-bottom: 1px solid var(--pun-border);
+                font-size: 1.05em;
+                font-weight: 600;
+                letter-spacing: 0.2px;
+            }
+            #UpdateNotifierPage .pun-card-icon {
+                font-size: 20px !important;
+                color: var(--primary-accent-color, #00a4dc);
+                flex-shrink: 0;
+            }
+            #UpdateNotifierPage .pun-card-name { flex: 1; min-width: 0; }
+            #UpdateNotifierPage .pun-card-version {
+                font-weight: 500;
+                font-size: 0.88em;
+                color: var(--pun-text-muted);
+                font-variant-numeric: tabular-nums;
+                white-space: nowrap;
+            }
+            #UpdateNotifierPage .pun-card-version .pun-new {
+                color: var(--primary-accent-color, #00a4dc);
+                font-weight: 600;
+            }
+            #UpdateNotifierPage .pun-card-body { padding: 18px 24px 20px; }
+            #UpdateNotifierPage .pun-meta {
+                color: var(--pun-text-subtle);
+                font-size: 0.85em;
+                margin-bottom: 10px;
+            }
+
+            /* Changelogs are markdown. Jellyfin's .fieldDescription forces
+               white-space:normal !important, so they are rendered into real
+               elements under these scoped names rather than pre-wrapped text. */
+            #UpdateNotifierPage .punLog { line-height: 1.55; color: var(--pun-text-muted); }
+            #UpdateNotifierPage .punLogHead {
+                font-weight: 600;
+                margin: 0.7em 0 0.35em;
+                color: inherit;
+                opacity: 0.95;
+            }
+            #UpdateNotifierPage .punLogHead:first-child { margin-top: 0; }
+            #UpdateNotifierPage .punLogList { margin: 0.2em 0; padding-left: 1.3em; }
+            #UpdateNotifierPage .punLogList li { margin: 0.25em 0; }
+            #UpdateNotifierPage .punLogP { margin: 0.35em 0; }
+            #UpdateNotifierPage .punLogNone {
+                color: var(--pun-text-subtle);
+                font-style: italic;
+            }
+
+            #UpdateNotifierPage .pun-footer { margin-top: 24px; }
+
+            #UpdateNotifierPage .pun-empty {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 22px 24px;
+                border: 1px dashed var(--pun-border-strong);
+                border-radius: 12px;
+                color: var(--pun-text-muted);
+            }
+            #UpdateNotifierPage .pun-empty .material-icons {
+                font-size: 26px !important;
+                color: var(--primary-accent-color, #00a4dc);
+            }
+
+            @media (max-width: 600px) {
+                #UpdateNotifierPage .pun-banner { flex-wrap: wrap; }
+                #UpdateNotifierPage .pun-card-head { padding: 12px 16px; }
+                #UpdateNotifierPage .pun-card-body { padding: 16px; }
+            }
+        </style>
+
+        <div data-role="content">
+            <div class="content-primary">
+                <div class="pun-wrap">
+                    <h2 class="sectionTitle">Plugin Updates</h2>
+                    <p class="pun-summary" id="punSummary">Loading&hellip;</p>
+
+                    <div id="punRestartNotice" class="pun-banner" style="display:none;">
+                        <span class="material-icons pun-banner-icon" aria-hidden="true">restart_alt</span>
+                        <div class="pun-banner-body">
+                            <div class="pun-banner-title">A server restart is required</div>
+                            <div class="pun-banner-text">
+                                The plugins below were installed or updated since the last restart and are not active yet.
+                            </div>
+                        </div>
+                        <button is="emby-button" type="button" id="punRestart" class="raised button-submit pun-restart-btn">
+                            <span>Restart server</span>
+                        </button>
+                    </div>
+
+                    <div id="punList" class="pun-list"></div>
+
+                    <div class="pun-footer">
+                        <button is="emby-button" type="button" id="punDismiss" class="raised" style="display:none;">
+                            <span>Dismiss notification</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            (function () {
+                var page = document.querySelector('#UpdateNotifierPage');
+
+                function esc(s) {
+                    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+                    });
+                }
+
+                // Jellyfin themes are swapped wholesale at runtime, so sniff the
+                // rendered background rather than trusting a class name.
+                function markTheme() {
+                    try {
+                        var bg = getComputedStyle(document.body).backgroundColor || '';
+                        var m = bg.match(/\d+/g);
+                        if (m && m.length >= 3) {
+                            var lum = (0.299 * +m[0] + 0.587 * +m[1] + 0.114 * +m[2]);
+                            page.classList.toggle('pun-dark', lum < 128);
+                        }
+                    } catch (e) { /* leave the default dark palette in place */ }
+                }
+
+                function renderChangelog(text) {
+                    if (!text) {
+                        return '<div class="punLogNone">No changelog was published for this release.</div>';
+                    }
+
+                    var html = '';
+                    var inList = false;
+                    String(text).replace(/\r/g, '').split('\n').forEach(function (line) {
+                        var t = line.trim();
+                        if (!t) return;
+
+                        if (/^#{1,6}\s/.test(t)) {
+                            if (inList) { html += '</ul>'; inList = false; }
+                            html += '<div class="punLogHead">' + esc(t.replace(/^#{1,6}\s*/, '')) + '</div>';
+                        } else if (/^[-*]\s+/.test(t)) {
+                            if (!inList) { html += '<ul class="punLogList">'; inList = true; }
+                            html += '<li>' + esc(t.replace(/^[-*]\s+/, '')) + '</li>';
+                        } else {
+                            if (inList) { html += '</ul>'; inList = false; }
+                            html += '<div class="punLogP">' + esc(t) + '</div>';
+                        }
+                    });
+                    if (inList) html += '</ul>';
+
+                    return '<div class="punLog">' + html + '</div>';
+                }
+
+                function versionLine(u) {
+                    if (u.OldVersion && u.OldVersion !== u.NewVersion) {
+                        return esc(u.OldVersion) + ' &rarr; <span class="pun-new">' + esc(u.NewVersion) + '</span>';
+                    }
+                    return 'Installed <span class="pun-new">' + esc(u.NewVersion) + '</span>';
+                }
+
+                function render(status) {
+                    var updates = status.Updates || [];
+                    var summary = page.querySelector('#punSummary');
+                    var notice = page.querySelector('#punRestartNotice');
+                    var dismiss = page.querySelector('#punDismiss');
+                    var list = page.querySelector('#punList');
+
+                    if (!updates.length) {
+                        summary.textContent = 'Nothing has changed since the last restart.';
+                        list.innerHTML = '<div class="pun-empty">'
+                            + '<span class="material-icons" aria-hidden="true">check_circle</span>'
+                            + '<span>No plugins have been installed or updated since the server last started.</span>'
+                            + '</div>';
+                        notice.style.display = 'none';
+                        dismiss.style.display = 'none';
+                        return;
+                    }
+
+                    summary.textContent = updates.length === 1
+                        ? '1 plugin has changed since the last restart.'
+                        : updates.length + ' plugins have changed since the last restart.';
+
+                    notice.style.display = status.PendingRestart ? 'flex' : 'none';
+                    dismiss.style.display = (status.PendingRestart && !status.Dismissed) ? 'inline-block' : 'none';
+
+                    list.innerHTML = updates.map(function (u) {
+                        var when = u.TimestampUtc ? new Date(u.TimestampUtc).toLocaleString() : '';
+                        return '<div class="pun-card">'
+                            + '<div class="pun-card-head">'
+                            + '<span class="material-icons pun-card-icon" aria-hidden="true">extension</span>'
+                            + '<span class="pun-card-name">' + esc(u.Name) + '</span>'
+                            + '<span class="pun-card-version">' + versionLine(u) + '</span>'
+                            + '</div>'
+                            + '<div class="pun-card-body">'
+                            + (when ? '<div class="pun-meta">' + esc(when) + '</div>' : '')
+                            + renderChangelog(u.Changelog)
+                            + '</div>'
+                            + '</div>';
+                    }).join('');
+                }
+
+                function load() {
+                    markTheme();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getJSON(ApiClient.getUrl('PluginUpdateNotifier/status'))
+                        .then(function (status) {
+                            render(status);
+                            Dashboard.hideLoadingMsg();
+                        })
+                        .catch(function () {
+                            page.querySelector('#punSummary').textContent =
+                                'Could not load plugin update status.';
+                            Dashboard.hideLoadingMsg();
+                        });
+                }
+
+                page.addEventListener('pageshow', load);
+
+                page.querySelector('#punDismiss').addEventListener('click', function () {
+                    ApiClient.ajax({
+                        type: 'POST',
+                        url: ApiClient.getUrl('PluginUpdateNotifier/dismiss')
+                    }).then(load);
+                });
+
+                page.querySelector('#punRestart').addEventListener('click', function () {
+                    Dashboard.restartServer();
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

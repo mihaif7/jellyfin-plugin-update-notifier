@@ -2,6 +2,10 @@
 <h2 align="center">A Jellyfin Plugin</h2>
 
 <p align="center">
+  <img alt="Plugin Update Notifier" src="docs/images/logo.png" width="70%" />
+</p>
+
+<p align="center">
   Badges the admin avatar and adds a profile-menu entry when plugins have been
   updated and the server needs a restart — with a dashboard page listing what
   changed and each release's changelog.

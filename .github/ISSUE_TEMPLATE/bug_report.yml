@@ -1,0 +1,48 @@
+name: Bug report
+description: Something in the plugin does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in the details below so it can be reproduced.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect instead?
+      placeholder: The badge did not appear after a plugin update, but I expected it to.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Update a plugin from the catalog
+        2. Open the dashboard
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: jellyfin-version
+    attributes:
+      label: Jellyfin server version
+      placeholder: "12.0.0"
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin Update Notifier version
+      placeholder: "1.0.0.0"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant server logs
+      description: Lines mentioning UpdateNotifier from the Jellyfin server log, if any.
+      render: text
+    validations:
+      required: false

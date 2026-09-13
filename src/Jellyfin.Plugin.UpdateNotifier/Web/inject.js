@@ -27,7 +27,7 @@
         styleInjected = true;
         var style = document.createElement('style');
         style.textContent =
-            '.' + BADGE_CLASS + '{position:absolute;top:2px;right:2px;width:10px;height:10px;' +
+            '.' + BADGE_CLASS + '{position:absolute;top:0px;right:0px;width:10px;height:10px;' +
             'border-radius:50%;background:#cc3333;box-shadow:0 0 0 2px rgba(0,0,0,.35);' +
             'pointer-events:none;z-index:1}' +
             '.' + BADGE_CLASS + 'Host{position:relative}' +

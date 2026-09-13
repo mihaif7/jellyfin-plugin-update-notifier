@@ -1,5 +1,4 @@
 <h1 align="center">Plugin Update Notifier</h1>
-<h2 align="center">A Jellyfin Plugin</h2>
 
 <p align="center">
   <img alt="Plugin Update Notifier" src="docs/images/logo.png" width="70%" />

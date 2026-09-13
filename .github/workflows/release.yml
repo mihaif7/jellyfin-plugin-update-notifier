@@ -1,0 +1,163 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 1.0.0.0'
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  PROJECT: Jellyfin.Plugin.UpdateNotifier/Jellyfin.Plugin.UpdateNotifier.csproj
+  ASSEMBLY: Jellyfin.Plugin.UpdateNotifier.dll
+  OUT_DIR: Jellyfin.Plugin.UpdateNotifier/bin/Release/net10.0
+  TARGET_ABI: '12.0.0.0'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Values from the event are passed through env rather than interpolated
+      # into the script, so a crafted tag or release body cannot inject shell.
+      - name: Resolve version
+        id: v
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_VERSION:-}" ]; then
+            VERSION="$INPUT_VERSION"
+            TAG="v${VERSION}"
+          else
+            TAG="$GITHUB_REF_NAME"
+            VERSION="${TAG#v}"
+          fi
+          case "$VERSION" in
+            *[!0-9.]*|'') echo "Refusing to release malformed version: $VERSION" >&2; exit 1 ;;
+          esac
+          # Jellyfin compares four-part versions, so pad 1.2.3 to 1.2.3.0.
+          while [ "$(printf '%s' "$VERSION" | tr -cd '.' | wc -c)" -lt 3 ]; do
+            VERSION="${VERSION}.0"
+          done
+          {
+            echo "version=$VERSION"
+            echo "tag=$TAG"
+            echo "zip=updatenotifier_${VERSION}.zip"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure the release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.v.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "$TAG" --generate-notes
+          fi
+
+      - name: Read release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.v.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --json body -q .body > release-notes.txt
+          [ -s release-notes.txt ] || printf 'Release %s.' "${TAG#v}" > release-notes.txt
+
+      - name: Stamp version
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          sed -i -E "s|<Version>[0-9.]+</Version>|<Version>${V}</Version>|;
+                     s|<AssemblyVersion>[0-9.]+</AssemblyVersion>|<AssemblyVersion>${V}</AssemblyVersion>|;
+                     s|<FileVersion>[0-9.]+</FileVersion>|<FileVersion>${V}</FileVersion>|" Directory.Build.props
+
+      - name: Build
+        run: dotnet build "$PROJECT" --configuration Release
+
+      - name: Package
+        id: pkg
+        env:
+          V: ${{ steps.v.outputs.version }}
+          ZIP: ${{ steps.v.outputs.zip }}
+        run: |
+          set -euo pipefail
+          TS="$(date -u +%Y-%m-%dT%H:%M:%S.0000000Z)"
+
+          # meta.json travels inside the zip so Jellyfin can identify the plugin.
+          # Its descriptive fields come from manifest.json, the single source of
+          # truth for them. --rawfile keeps the notes as data, never as shell.
+          jq --arg v "$V" --arg ts "$TS" --arg abi "$TARGET_ABI" --arg dll "$ASSEMBLY" \
+             --rawfile log release-notes.txt '
+             .[0] | {
+               category, description, guid, name, overview, owner,
+               changelog: $log,
+               targetAbi: $abi,
+               timestamp: $ts,
+               version: $v,
+               status: "Active",
+               autoUpdate: true,
+               assemblies: [$dll]
+             }' manifest.json > "$OUT_DIR/meta.json"
+
+          mkdir -p dist
+          (cd "$OUT_DIR" && zip -j "$GITHUB_WORKSPACE/dist/$ZIP" "$ASSEMBLY" meta.json)
+
+          {
+            echo "checksum=$(md5sum "dist/$ZIP" | cut -d' ' -f1)"
+            echo "timestamp=$TS"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update manifest.json
+        env:
+          V: ${{ steps.v.outputs.version }}
+          ZIP: ${{ steps.v.outputs.zip }}
+          TAG: ${{ steps.v.outputs.tag }}
+          SUM: ${{ steps.pkg.outputs.checksum }}
+          TS: ${{ steps.pkg.outputs.timestamp }}
+        run: |
+          set -euo pipefail
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${ZIP}"
+          jq --arg v "$V" --arg abi "$TARGET_ABI" --arg url "$URL" \
+             --arg sum "$SUM" --arg ts "$TS" --rawfile log release-notes.txt '
+             .[0].versions = ([{
+               version: $v, changelog: $log, targetAbi: $abi,
+               sourceUrl: $url, checksum: $sum, timestamp: $ts
+             }] + (.[0].versions | map(select(.version != $v))))' \
+             manifest.json > manifest.tmp
+          mv manifest.tmp manifest.json
+
+      - name: Commit the release metadata
+        env:
+          V: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add manifest.json Directory.Build.props
+          git diff --staged --quiet || git commit -m "chore(release): ${V}"
+          git push origin main
+
+      - name: Attach the zip to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.v.outputs.tag }}
+          ZIP: ${{ steps.v.outputs.zip }}
+        run: gh release upload "$TAG" "dist/$ZIP" --clobber

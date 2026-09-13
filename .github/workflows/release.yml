@@ -14,9 +14,9 @@ permissions:
   contents: write
 
 env:
-  PROJECT: Jellyfin.Plugin.UpdateNotifier/Jellyfin.Plugin.UpdateNotifier.csproj
+  PROJECT: src/Jellyfin.Plugin.UpdateNotifier/Jellyfin.Plugin.UpdateNotifier.csproj
   ASSEMBLY: Jellyfin.Plugin.UpdateNotifier.dll
-  OUT_DIR: Jellyfin.Plugin.UpdateNotifier/bin/Release/net10.0
+  OUT_DIR: src/Jellyfin.Plugin.UpdateNotifier/bin/Release/net10.0
   TARGET_ABI: '12.0.0.0'
 
 jobs:
@@ -87,7 +87,7 @@ jobs:
           set -euo pipefail
           sed -i -E "s|<Version>[0-9.]+</Version>|<Version>${V}</Version>|;
                      s|<AssemblyVersion>[0-9.]+</AssemblyVersion>|<AssemblyVersion>${V}</AssemblyVersion>|;
-                     s|<FileVersion>[0-9.]+</FileVersion>|<FileVersion>${V}</FileVersion>|" Directory.Build.props
+                     s|<FileVersion>[0-9.]+</FileVersion>|<FileVersion>${V}</FileVersion>|" src/Directory.Build.props
 
       - name: Build
         run: dotnet build "$PROJECT" --configuration Release
@@ -151,7 +151,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add manifest.json Directory.Build.props
+          git add manifest.json src/Directory.Build.props
           git diff --staged --quiet || git commit -m "chore(release): ${V}"
           git push origin main
 

@@ -98,7 +98,7 @@ Both require administrator privileges.
 Requires the .NET 10 SDK.
 
 ```sh
-dotnet build -c Release
+dotnet build src -c Release
 ```
 
 The build runs StyleCop and the .NET analyzers with warnings as errors, so a

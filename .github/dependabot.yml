@@ -45,9 +45,8 @@ updates:
       prefix: "chore(ci)"
       include: "scope"
     groups:
+      # One PR for all Action updates, including SHA-pin bumps that carry no
+      # semver update-type (those arrive ungrouped otherwise).
       github-actions:
         patterns:
           - "*"
-        update-types:
-          - "minor"
-          - "patch"

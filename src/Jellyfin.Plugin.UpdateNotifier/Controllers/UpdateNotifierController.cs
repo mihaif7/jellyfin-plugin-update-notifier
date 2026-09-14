@@ -55,6 +55,27 @@ public class UpdateNotifierController : ControllerBase
     }
 
     /// <summary>
+    /// Gets just the counts the avatar badge needs.
+    /// </summary>
+    /// <remarks>
+    /// The badge is polled; <see cref="GetStatus"/> carries every changelog in
+    /// full, which the badge would only discard.
+    /// </remarks>
+    /// <response code="200">Summary returned.</response>
+    /// <returns>The summary payload.</returns>
+    [HttpGet("summary")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult<SummaryResponse> GetSummary()
+    {
+        return new SummaryResponse
+        {
+            PendingRestart = _applicationHost.HasPendingRestart,
+            Dismissed = _tracker.IsDismissed(),
+            Count = _tracker.GetUpdateCount(),
+        };
+    }
+
+    /// <summary>
     /// Dismisses the current notification for every admin session.
     /// </summary>
     /// <response code="204">Notification dismissed.</response>

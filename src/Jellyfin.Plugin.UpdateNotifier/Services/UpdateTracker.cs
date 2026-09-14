@@ -103,6 +103,19 @@ public class UpdateTracker
     }
 
     /// <summary>
+    /// Gets the number of recorded updates.
+    /// </summary>
+    /// <returns>The number of recorded updates.</returns>
+    public int GetUpdateCount()
+    {
+        lock (_stateLock)
+        {
+            EnsureLoaded();
+            return _state.Updates.Count;
+        }
+    }
+
+    /// <summary>
     /// Gets a value indicating whether the notification has been dismissed.
     /// </summary>
     /// <returns><c>true</c> if dismissed.</returns>

@@ -216,12 +216,14 @@
     function refresh(client) {
         lastFetch = Date.now();
         nextDue = lastFetch + POLL_MS;
-        client.getJSON(client.getUrl('PluginUpdateNotifier/status'))
-            .then(function (status) {
-                var updates = (status && status.Updates) || [];
+        // summary rather than status: the badge needs a flag and a number, and
+        // status carries every plugin's changelog in full alongside them.
+        client.getJSON(client.getUrl('PluginUpdateNotifier/summary'))
+            .then(function (summary) {
+                var n = (summary && summary.Count) || 0;
                 apply(
-                    !!(status && status.PendingRestart) && updates.length > 0 && !status.Dismissed,
-                    updates.length);
+                    !!(summary && summary.PendingRestart) && n > 0 && !summary.Dismissed,
+                    n);
                 scheduleNext();
             })
             .catch(function (err) {

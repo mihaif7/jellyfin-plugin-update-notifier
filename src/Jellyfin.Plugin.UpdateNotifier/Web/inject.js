@@ -7,20 +7,36 @@
  * aria-controls="app-user-menu" and the dropdown is a keepMounted MUI Menu with
  * id="app-user-menu"; both are stable, unlike the build-generated emotion class
  * names, which is why the menu entry clones its classes from a real MenuItem.
+ *
+ * The injector serves this script to every signed-in session, so nothing here
+ * touches the network or the DOM until the session is known to be an admin's.
  */
 (function () {
-    var POLL_MS = 60000;
     var MENU_ID = 'app-user-menu';
     var BUTTON_SELECTOR = 'button[aria-controls="' + MENU_ID + '"]';
     var PAGE_HREF = '#/configurationpage?name=UpdateNotifier';
     var BADGE_CLASS = 'pluginUpdateNotifierBadge';
     var ITEM_CLASS = 'pluginUpdateNotifierItem';
 
+    // A restart pending "at some point" does not need catching sooner.
+    var POLL_MS = 300000;
+    var RETRY_MS = 60000;
+    var WAIT_MS = 5000;
+    var IDLE_MS = 60000;
+    var MENU_MS = 10000;
+
     var pending = false;
     var count = 0;
     var styleInjected = false;
     var observer = null;
     var scheduled = false;
+
+    var timer = null;
+    var lastFetch = 0;
+    var nextDue = 0;
+    var userId = null;
+    var admin = null;
+    var resolving = false;
 
     function injectStyle() {
         if (styleInjected) return;
@@ -154,40 +170,141 @@
         }, 200);
     }
 
-    function refresh() {
-        if (typeof ApiClient === 'undefined' || !ApiClient) return;
-        ApiClient.getJSON(ApiClient.getUrl('PluginUpdateNotifier/status'))
+    // React re-renders the toolbar and drops the injected nodes. A body-wide
+    // observer is the costliest thing here, so it runs only while a badge is up.
+    function setObserving(on) {
+        if (on && !observer) {
+            observer = new MutationObserver(scheduleSync);
+            observer.observe(document.body, { childList: true, subtree: true });
+        } else if (!on && observer) {
+            observer.disconnect();
+            observer = null;
+        }
+    }
+
+    function apply(nextPending, nextCount) {
+        pending = nextPending;
+        count = nextCount;
+        setObserving(pending);
+        sync();
+    }
+
+    function api() {
+        return typeof ApiClient !== 'undefined' && ApiClient ? ApiClient : null;
+    }
+
+    function signedInId(client) {
+        try {
+            return (client.getCurrentUserId && client.getCurrentUserId()) || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function schedule(ms) {
+        if (timer) clearTimeout(timer);
+        timer = document.hidden ? null : setTimeout(tick, ms);
+    }
+
+    // Capped so a user switch is still noticed while nextDue is far off.
+    function scheduleNext() {
+        var wait = nextDue - Date.now();
+        if (wait < 0) wait = 0;
+        schedule(wait < IDLE_MS ? wait : IDLE_MS);
+    }
+
+    function refresh(client) {
+        lastFetch = Date.now();
+        nextDue = lastFetch + POLL_MS;
+        client.getJSON(client.getUrl('PluginUpdateNotifier/status'))
             .then(function (status) {
                 var updates = (status && status.Updates) || [];
-                count = updates.length;
-                pending = !!(status && status.PendingRestart) && count > 0 && !status.Dismissed;
-                sync();
+                apply(
+                    !!(status && status.PendingRestart) && updates.length > 0 && !status.Dismissed,
+                    updates.length);
+                scheduleNext();
             })
-            .catch(function () {
-                // Non-admins get 403 from the elevated endpoint; stay silent.
-                pending = false;
-                count = 0;
-                sync();
+            .catch(function (err) {
+                // Elevation failed: re-resolve rather than retry a doomed request.
+                if (err && (err.status === 401 || err.status === 403)) admin = null;
+                apply(false, 0);
+                nextDue = Date.now() + RETRY_MS;
+                scheduleNext();
             });
     }
 
-    function start() {
-        refresh();
-        setInterval(refresh, POLL_MS);
+    function tick() {
+        timer = null;
 
-        // The poll alone goes stale between ticks, and hidden tabs throttle it
-        // further, so re-check at the moments the count is actually read.
+        var client = api();
+        var id = client ? signedInId(client) : null;
+
+        // Sign-in, sign-out and user switches happen without a page load.
+        if (id !== userId) {
+            userId = id;
+            admin = null;
+            lastFetch = 0;
+            nextDue = 0;
+            apply(false, 0);
+        }
+
+        if (!id) {
+            schedule(WAIT_MS);
+            return;
+        }
+
+        if (admin === null) {
+            if (resolving) {
+                schedule(IDLE_MS);
+                return;
+            }
+            resolving = true;
+            client.getCurrentUser().then(function (user) {
+                resolving = false;
+                admin = !!(user && user.Policy && user.Policy.IsAdministrator);
+                tick();
+            }, function () {
+                resolving = false;
+                schedule(RETRY_MS);
+            });
+            return;
+        }
+
+        if (!admin) {
+            // Nothing to ask for: the endpoint would answer 403 every time.
+            schedule(IDLE_MS);
+            return;
+        }
+
+        if (nextDue - Date.now() > 0) {
+            scheduleNext();
+            return;
+        }
+
+        refresh(client);
+    }
+
+    function start() {
         document.addEventListener('visibilitychange', function () {
-            if (!document.hidden) refresh();
+            if (document.hidden) {
+                if (timer) clearTimeout(timer);
+                timer = null;
+                return;
+            }
+            // Resumes the schedule; tick() refetches only if the answer is stale.
+            if (!timer) tick();
         });
+
         document.addEventListener('click', function (e) {
+            if (!admin) return;
             var t = e.target;
-            if (t && t.closest && t.closest(BUTTON_SELECTOR)) refresh();
+            if (!t || !t.closest || !t.closest(BUTTON_SELECTOR)) return;
+            if (Date.now() - lastFetch < MENU_MS) return;
+            var client = api();
+            if (client) refresh(client);
         }, true);
 
-        // React re-renders the toolbar on navigation and drops injected nodes.
-        observer = new MutationObserver(scheduleSync);
-        observer.observe(document.body, { childList: true, subtree: true });
+        tick();
     }
 
     if (document.readyState === 'loading') {

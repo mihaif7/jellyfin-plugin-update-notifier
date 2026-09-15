@@ -48,8 +48,8 @@
 
 > [!TIP]
 > The plugin is also available in the
-> [Jellyfin Universal Plugin Repo](https://github.com/0belous/Jellyfin-Universal-Plugin-Repo) —
-> if you already have `https://obelo.us/upr` added, skip step 2.
+> [Jellyfin Universal Plugin Repo](https://github.com/0belous/Jellyfin-Universal-Plugin-Repo).
+> If you already added `https://obelo.us/upr` to your repositories, skip step 2.
 
 > [!IMPORTANT]
 > The **avatar badge and profile-menu entry** additionally require the

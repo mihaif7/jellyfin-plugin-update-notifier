@@ -44,6 +44,14 @@
 > https://raw.githubusercontent.com/mihaif7/jellyfin-plugin-update-notifier/main/manifest.json
 > ```
 
+> [!TIP]
+> The plugin is also available in the
+> [Jellyfin Universal Plugin Repo](https://github.com/0belous/Jellyfin-Universal-Plugin-Repo),
+> so if you already have that repository added there is nothing to add here:
+> ```
+> https://obelo.us/upr
+> ```
+
 3. Open the **Catalog** tab, find **Plugin Update Notifier**, and click **Install**.
 4. **Restart** your Jellyfin server.
 

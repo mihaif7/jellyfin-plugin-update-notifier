@@ -108,6 +108,13 @@
                 flex-shrink: 0;
             }
             #UpdateNotifierPage .pun-card-name { flex: 1; min-width: 0; }
+            /* Removals get their own accent: the card reads as a subtraction
+               rather than a release, and carries no changelog to show. */
+            #UpdateNotifierPage .pun-card-removed .pun-card-icon { color: #ff6b6b; }
+            #UpdateNotifierPage .pun-card-removed .pun-card-head {
+                background: linear-gradient(to left, rgba(220, 53, 69, 0.14) 0%, rgba(255, 255, 255, 0.02) 100%);
+            }
+            #UpdateNotifierPage .pun-card-removed .pun-card-version .pun-new { color: #ff6b6b; }
             #UpdateNotifierPage .pun-card-version {
                 font-weight: 500;
                 font-size: 0.88em;
@@ -214,6 +221,44 @@
             #UpdateNotifierPage .pun-modal-actions .button-flat { background: transparent; margin: 0; }
             #UpdateNotifierPage .pun-modal-danger { background: #cc3333; margin: 0; }
 
+            #UpdateNotifierPage .pun-history { margin-top: 34px; }
+            #UpdateNotifierPage .pun-history-toggle {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: none;
+                border: 0;
+                padding: 0;
+                margin: 0 0 6px;
+                font: inherit;
+                font-weight: 600;
+                color: inherit;
+                cursor: pointer;
+            }
+            #UpdateNotifierPage .pun-history-toggle:hover { color: var(--primary-accent-color, #00a4dc); }
+            #UpdateNotifierPage .pun-history-toggle .material-icons {
+                font-size: 22px !important;
+                transition: transform 0.2s ease;
+            }
+            #UpdateNotifierPage .pun-history-toggle[aria-expanded="true"] .material-icons { transform: rotate(90deg); }
+            #UpdateNotifierPage .pun-history-hint {
+                margin: 0 0 16px;
+                max-width: 640px;
+                color: var(--pun-text-subtle);
+                font-size: 0.85em;
+                line-height: 1.5;
+            }
+            #UpdateNotifierPage .pun-history-group {
+                margin: 22px 0 12px;
+                color: var(--pun-text-muted);
+                font-size: 0.85em;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+                text-transform: uppercase;
+            }
+            #UpdateNotifierPage .pun-history-group:first-child { margin-top: 0; }
+            #UpdateNotifierPage .pun-history-actions { margin-top: 20px; }
+
             #UpdateNotifierPage .pun-empty {
                 display: flex;
                 align-items: center;
@@ -246,7 +291,7 @@
                         <div class="pun-banner-body">
                             <div class="pun-banner-title">A server restart is required</div>
                             <div class="pun-banner-text">
-                                The plugins below were installed or updated since the last restart and are not active yet.
+                                The plugins below were installed, updated or removed since the last restart, and those changes are not live yet.
                             </div>
                         </div>
                         <button is="emby-button" type="button" id="punRestart" class="raised button-submit pun-restart-btn">
@@ -262,15 +307,33 @@
                         </button>
                         <p class="pun-dismiss-hint" id="punDismissHint" style="display:none;">
                             Hides the badge on your avatar and the profile-menu entry. The restart reminder and the list
-                            below stay until you restart, and the badge returns if another plugin is installed or updated.
+                            below stay until you restart, and the badge returns if another plugin changes.
                         </p>
+                    </div>
+
+                    <div class="pun-history" id="punHistory" style="display:none;">
+                        <button type="button" class="pun-history-toggle" id="punHistoryToggle" aria-expanded="false" aria-controls="punHistoryBody">
+                            <span class="material-icons" aria-hidden="true">chevron_right</span>
+                            <span id="punHistoryLabel">Previously applied</span>
+                        </button>
+                        <div id="punHistoryBody" style="display:none;">
+                            <p class="pun-history-hint">
+                                Changes that went live at an earlier restart, newest first. Kept for the last 50 records.
+                            </p>
+                            <div id="punHistoryList" class="pun-list"></div>
+                            <div class="pun-history-actions">
+                                <button is="emby-button" type="button" id="punHistoryClear" class="raised">
+                                    <span>Clear history</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="punConfirm" class="pun-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="punConfirmTitle">
                         <div class="pun-modal-backdrop" id="punConfirmBackdrop"></div>
                         <div class="pun-modal-box" role="document">
                             <h3 class="pun-modal-title" id="punConfirmTitle">Restart</h3>
-                            <p class="pun-modal-text">Are you sure you wish to restart Jellyfin?</p>
+                            <p class="pun-modal-text" id="punConfirmText">Are you sure you wish to restart Jellyfin?</p>
                             <div class="pun-modal-actions">
                                 <button is="emby-button" type="button" class="button-flat" id="punConfirmCancel"><span>Cancel</span></button>
                                 <button is="emby-button" type="button" class="raised pun-modal-danger" id="punConfirmOk"><span>Restart</span></button>
@@ -357,7 +420,20 @@
                     return '<div class="punLog">' + html + '</div>';
                 }
 
+                // A number is still accepted, for a record written before
+                // the string converter.
+                var KINDS = ['Installed', 'Updated', 'Removed'];
+
+                function kindOf(u) {
+                    var k = u.Kind;
+                    if (typeof k === 'number') k = KINDS[k];
+                    return k ? String(k).toLowerCase() : 'installed';
+                }
+
                 function versionLine(u) {
+                    if (kindOf(u) === 'removed') {
+                        return 'Removed <span class="pun-new">' + esc(u.NewVersion) + '</span>';
+                    }
                     if (u.OldVersion && u.OldVersion !== u.NewVersion) {
                         return esc(u.OldVersion) + ' &rarr; <span class="pun-new">' + esc(u.NewVersion) + '</span>';
                     }
@@ -383,6 +459,32 @@
                     return null;
                 }
 
+                function cardHtml(u) {
+                    var removed = kindOf(u) === 'removed';
+                    var when = u.TimestampUtc ? new Date(u.TimestampUtc).toLocaleString() : '';
+                    var link = sourceLink(u.SourceUrl);
+                    var linkHtml = link
+                        ? '<a class="pun-source" href="' + esc(link.href) + '" target="_blank" rel="noopener noreferrer">'
+                            + '<span class="pun-source-label">' + esc(link.label) + '</span>'
+                            + '<span class="material-icons pun-source-icon" aria-hidden="true">open_in_new</span></a>'
+                        : '';
+                    var meta = (when ? '<span>' + esc(when) + '</span>' : '') + linkHtml;
+                    return '<div class="pun-card' + (removed ? ' pun-card-removed' : '') + '">'
+                        + '<div class="pun-card-head">'
+                        + '<span class="material-icons pun-card-icon" aria-hidden="true">'
+                        + (removed ? 'extension_off' : 'extension') + '</span>'
+                        + '<span class="pun-card-name">' + esc(u.Name) + '</span>'
+                        + '<span class="pun-card-version">' + versionLine(u) + '</span>'
+                        + '</div>'
+                        + '<div class="pun-card-body">'
+                        + (meta ? '<div class="pun-meta">' + meta + '</div>' : '')
+                        + (removed
+                            ? '<div class="punLogNone">The plugin was uninstalled.</div>'
+                            : renderChangelog(u.Changelog))
+                        + '</div>'
+                        + '</div>';
+                }
+
                 function render(status) {
                     var updates = status.Updates || [];
                     var summary = page.querySelector('#punSummary');
@@ -395,7 +497,7 @@
                         summary.textContent = 'Nothing has changed since the last restart.';
                         list.innerHTML = '<div class="pun-empty">'
                             + '<span class="material-icons" aria-hidden="true">check_circle</span>'
-                            + '<span>No plugins have been installed or updated since the server last started.</span>'
+                            + '<span>No plugins have been installed, updated or removed since the server last started.</span>'
                             + '</div>';
                         notice.style.display = 'none';
                         dismiss.style.display = 'none';
@@ -412,35 +514,80 @@
                     dismiss.style.display = canDismiss ? 'inline-block' : 'none';
                     dismissHint.style.display = canDismiss ? 'block' : 'none';
 
-                    list.innerHTML = updates.map(function (u) {
-                        var when = u.TimestampUtc ? new Date(u.TimestampUtc).toLocaleString() : '';
-                        var link = sourceLink(u.SourceUrl);
-                        var linkHtml = link
-                            ? '<a class="pun-source" href="' + esc(link.href) + '" target="_blank" rel="noopener noreferrer">'
-                                + '<span class="pun-source-label">' + esc(link.label) + '</span>'
-                                + '<span class="material-icons pun-source-icon" aria-hidden="true">open_in_new</span></a>'
-                            : '';
-                        var meta = (when ? '<span>' + esc(when) + '</span>' : '') + linkHtml;
-                        return '<div class="pun-card">'
-                            + '<div class="pun-card-head">'
-                            + '<span class="material-icons pun-card-icon" aria-hidden="true">extension</span>'
-                            + '<span class="pun-card-name">' + esc(u.Name) + '</span>'
-                            + '<span class="pun-card-version">' + versionLine(u) + '</span>'
-                            + '</div>'
-                            + '<div class="pun-card-body">'
-                            + (meta ? '<div class="pun-meta">' + meta + '</div>' : '')
-                            + renderChangelog(u.Changelog)
-                            + '</div>'
-                            + '</div>';
+                    list.innerHTML = updates.map(cardHtml).join('');
+                }
+
+                var historyLoaded = false;
+
+                function historyGroupLabel(record) {
+                    return record.RestartedAtUtc
+                        ? 'Live since ' + new Date(record.RestartedAtUtc).toLocaleString()
+                        : 'Applied at an earlier restart';
+                }
+
+                // Records arrive grouped by restart, so a heading goes in
+                // wherever the stamp changes.
+                function renderHistory(records) {
+                    var listEl = page.querySelector('#punHistoryList');
+                    var groupKey = null;
+                    listEl.innerHTML = records.map(function (r) {
+                        var html = '';
+                        var key = r.RestartedAtUtc || '';
+                        if (key !== groupKey) {
+                            groupKey = key;
+                            html += '<div class="pun-history-group">' + esc(historyGroupLabel(r)) + '</div>';
+                        }
+                        return html + cardHtml(r);
                     }).join('');
+                }
+
+                function loadHistory() {
+                    return ApiClient.getJSON(ApiClient.getUrl('PluginUpdateNotifier/history'))
+                        .then(function (res) {
+                            historyLoaded = true;
+                            renderHistory((res && res.Records) || []);
+                        })
+                        .catch(function () {
+                            page.querySelector('#punHistoryList').innerHTML =
+                                '<div class="punLogNone">Could not load the history.</div>';
+                        });
+                }
+
+                function isHistoryOpen() {
+                    return page.querySelector('#punHistoryToggle').getAttribute('aria-expanded') === 'true';
+                }
+
+                function setHistoryOpen(open) {
+                    var toggle = page.querySelector('#punHistoryToggle');
+                    var body = page.querySelector('#punHistoryBody');
+                    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    body.style.display = open ? 'block' : 'none';
+                    // Fetched on first open only: every record carries a full changelog.
+                    if (open && !historyLoaded) loadHistory();
+                }
+
+                function renderHistorySection(count) {
+                    var section = page.querySelector('#punHistory');
+                    section.style.display = count > 0 ? 'block' : 'none';
+                    page.querySelector('#punHistoryLabel').textContent =
+                        'Previously applied (' + count + ')';
+                    if (!count) {
+                        setHistoryOpen(false);
+                    } else if (isHistoryOpen()) {
+                        loadHistory();
+                    }
                 }
 
                 function load() {
                     markTheme();
+                    // A reload refetches an open history rather than closing it,
+                    // so dismissing does not collapse the section underneath.
+                    historyLoaded = false;
                     Dashboard.showLoadingMsg();
                     ApiClient.getJSON(ApiClient.getUrl('PluginUpdateNotifier/status'))
                         .then(function (status) {
                             render(status);
+                            renderHistorySection(status.HistoryCount || 0);
                             Dashboard.hideLoadingMsg();
                         })
                         .catch(function () {
@@ -470,19 +617,47 @@
                 }
 
                 var confirmModal = page.querySelector('#punConfirm');
+                var confirmAction = null;
 
                 function closeConfirm() {
                     confirmModal.style.display = 'none';
+                    confirmAction = null;
+                }
+
+                function askConfirm(title, text, okLabel, onOk) {
+                    page.querySelector('#punConfirmTitle').textContent = title;
+                    page.querySelector('#punConfirmText').textContent = text;
+                    page.querySelector('#punConfirmOk').querySelector('span').textContent = okLabel;
+                    confirmAction = onOk;
+                    confirmModal.style.display = 'flex';
                 }
 
                 page.querySelector('#punRestart').addEventListener('click', function () {
-                    confirmModal.style.display = 'flex';
+                    askConfirm('Restart', 'Are you sure you wish to restart Jellyfin?', 'Restart', restartServer);
                 });
                 page.querySelector('#punConfirmCancel').addEventListener('click', closeConfirm);
                 page.querySelector('#punConfirmBackdrop').addEventListener('click', closeConfirm);
                 page.querySelector('#punConfirmOk').addEventListener('click', function () {
+                    var action = confirmAction;
                     closeConfirm();
-                    restartServer();
+                    if (action) action();
+                });
+
+                page.querySelector('#punHistoryToggle').addEventListener('click', function () {
+                    setHistoryOpen(!isHistoryOpen());
+                });
+
+                page.querySelector('#punHistoryClear').addEventListener('click', function () {
+                    askConfirm(
+                        'Clear history',
+                        'Discard the record of changes applied at earlier restarts? The plugins themselves are not touched.',
+                        'Clear',
+                        function () {
+                            ApiClient.ajax({
+                                type: 'POST',
+                                url: ApiClient.getUrl('PluginUpdateNotifier/history/clear')
+                            }).then(load);
+                        });
                 });
             })();
         </script>

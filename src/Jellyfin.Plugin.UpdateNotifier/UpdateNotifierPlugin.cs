@@ -37,7 +37,11 @@ public class UpdateNotifierPlugin : BasePlugin<PluginConfiguration>, IHasWebPage
     public override Guid Id => Guid.Parse("b6a1c3f2-5d84-4e77-9d2a-7f1c8e4b3a91");
 
     /// <inheritdoc />
-    public override string Description => "Notifies admins when plugins have been updated and the server needs a restart.";
+    public override string Description =>
+        "Badges the admin avatar and adds a profile-menu entry when plugins are installed, "
+        + "updated or removed and the server needs a restart, with a dashboard page listing "
+        + "what changed, each release's changelog, and a history of what earlier restarts applied. "
+        + "Source, docs and issues: https://github.com/mihaif7/jellyfin-plugin-update-notifier";
 
     /// <inheritdoc />
     public IEnumerable<PluginPageInfo> GetPages()

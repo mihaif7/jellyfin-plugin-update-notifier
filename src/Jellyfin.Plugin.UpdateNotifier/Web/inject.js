@@ -155,6 +155,7 @@
     }
 
     var popup = null;
+    var popupAnchor = null;
 
     // Rendered on the body rather than inside the menu, whose paper clips
     // its overflow.
@@ -170,6 +171,7 @@
         popup.style.left = '0px';
         popup.style.top = '0px';
         document.body.appendChild(popup);
+        popupAnchor = anchor;
 
         // Centred below the entry, kept inside the viewport.
         var rect = anchor.getBoundingClientRect();
@@ -185,6 +187,7 @@
     }
 
     function hidePopup() {
+        popupAnchor = null;
         if (popup && popup.parentNode) popup.parentNode.removeChild(popup);
     }
 
@@ -227,6 +230,9 @@
     }
 
     function sync() {
+        // React can drop the entry while its popup is up, and a removed
+        // node never fires mouseleave.
+        if (popupAnchor && !document.body.contains(popupAnchor)) hidePopup();
         if (observer) observer.disconnect();
         try {
             syncBadge();
@@ -399,6 +405,9 @@
             // Resumes the schedule; tick() refetches only if the answer is stale.
             if (!timer) tick();
         });
+
+        // Back or a shortcut can navigate while the menu is still open.
+        window.addEventListener('hashchange', hidePopup);
 
         document.addEventListener('click', function (e) {
             var t = e.target;

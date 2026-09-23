@@ -194,6 +194,13 @@
 
         var existing = menu.querySelector('.' + ITEM_CLASS);
 
+        // Built for the other kind of user: a switch between admin and
+        // non-admin needs the other anchor, link and state.
+        if (existing && existing.hasAttribute('href') !== !!admin) {
+            existing.remove();
+            existing = null;
+        }
+
         if (!pending) {
             if (existing) existing.remove();
             hidePopup();
@@ -238,6 +245,11 @@
         // tabs, which would latch this flag and stop syncing until refocus.
         setTimeout(function () {
             scheduled = false;
+            // Signing out navigates, which lands here while a badge is up.
+            if (switched()) {
+                recheck();
+                return;
+            }
             sync();
         }, 200);
     }
@@ -273,6 +285,17 @@
         }
     }
 
+    // Sign-in, sign-out and user switches happen without a page load.
+    function switched() {
+        var client = api();
+        return (client ? signedInId(client) : null) !== userId;
+    }
+
+    function recheck() {
+        if (timer) clearTimeout(timer);
+        tick();
+    }
+
     function schedule(ms) {
         if (timer) clearTimeout(timer);
         timer = document.hidden ? null : setTimeout(tick, ms);
@@ -286,12 +309,15 @@
     }
 
     function refresh(client) {
+        var askedFor = userId;
         lastFetch = Date.now();
         nextDue = lastFetch + POLL_MS;
         // summary rather than status: the badge needs a flag and a number, and
         // status carries every plugin's changelog in full alongside them.
         client.getJSON(client.getUrl('PluginUpdateNotifier/summary'))
             .then(function (summary) {
+                // The answer belongs to a user who has since signed out.
+                if (userId !== askedFor) return;
                 notified = true;
                 var n = (summary && summary.Count) || 0;
                 apply(
@@ -300,6 +326,7 @@
                 scheduleNext();
             })
             .catch(function (err) {
+                if (userId !== askedFor) return;
                 notified = false;
                 apply(false, 0);
                 var denied = err && (err.status === 401 || err.status === 403);
@@ -321,7 +348,6 @@
         var client = api();
         var id = client ? signedInId(client) : null;
 
-        // Sign-in, sign-out and user switches happen without a page load.
         if (id !== userId) {
             userId = id;
             admin = null;
@@ -344,7 +370,9 @@
             resolving = true;
             client.getCurrentUser().then(function (user) {
                 resolving = false;
-                admin = !!(user && user.Policy && user.Policy.IsAdministrator);
+                if (userId === id) {
+                    admin = !!(user && user.Policy && user.Policy.IsAdministrator);
+                }
                 tick();
             }, function () {
                 resolving = false;
@@ -377,6 +405,11 @@
             // A tap outside the entry, the backdrop included, closes the popup.
             if (!t || !t.closest || !t.closest('.' + ITEM_CLASS)) hidePopup();
             if (!t || !t.closest || !t.closest(BUTTON_SELECTOR)) return;
+            // The menu is about to open: it must not show the last user's entry.
+            if (switched()) {
+                recheck();
+                return;
+            }
             if (!notified) return;
             if (Date.now() - lastFetch < MENU_MS) return;
             var client = api();

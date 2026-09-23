@@ -9,12 +9,20 @@
     "imageUrl": "https://raw.githubusercontent.com/mihaif7/jellyfin-plugin-update-notifier/main/docs/images/logo.png",
     "versions": [
       {
-        "version": "1.2.0.0",
-        "changelog": "## ✨ New Features\r\n\r\n- **Removals are tracked**: uninstalling a plugin now shows on the **Plugin Updates** page and badges your avatar, just like an install, until the restart that applies it.\r\n- **History of applied changes**: a collapsible **Previously applied** section lists what earlier restarts made live, grouped by restart. It keeps the last 50 changes and can be cleared.\r\n- **Built for Jellyfin 12.0 and 12.1**: each release is now published once per server version, so the catalog offers a build that targets your server exactly.\r\n\r\n## 🐞 Bug Fixes\r\n\r\n- **One card per plugin**: installing and then updating a plugin before a restart shows as a single change, and installing then removing one shows nothing at all.\r\n- **Manual task runs are safe**: running the plugin's startup task by hand from Scheduled Tasks no longer clears changes that are still waiting for a restart.\r\n- **Sturdier saved state**: a damaged state file is kept aside as `updates.json.unreadable` instead of being overwritten, and one bad entry no longer costs the rest.\r\n\r\n",
+        "version": "1.3.0.0",
+        "changelog": "## ✨ New Features\r\n\r\n- **Notify chosen users**: tick non-admin users on the new **Settings** tab to show them the badge too.\r\n- **Counts only**: they see how many plugins changed, and can't dismiss or restart.\r\n\r\n## 🎨 Improvements\r\n\r\n- **Tabbed plugin page**: the page is split into **Updates** and **Settings** tabs.\r\n\r\n",
         "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://github.com/mihaif7/jellyfin-plugin-update-notifier/releases/download/v1.2.0.0/updatenotifier_1.2.0.0_12.1.zip",
-        "checksum": "c04b90252cc155b9cb84f172fd965def",
-        "timestamp": "2026-09-23T12:12:53.0000000Z"
+        "sourceUrl": "https://github.com/mihaif7/jellyfin-plugin-update-notifier/releases/download/v1.3.0.0/updatenotifier_1.3.0.0_12.1.zip",
+        "checksum": "827e26f92b8e2f5e50daaa0f0d0150a4",
+        "timestamp": "2026-09-23T19:56:58.0000000Z"
+      },
+      {
+        "version": "1.3.0.0",
+        "changelog": "## ✨ New Features\r\n\r\n- **Notify chosen users**: tick non-admin users on the new **Settings** tab to show them the badge too.\r\n- **Counts only**: they see how many plugins changed, and can't dismiss or restart.\r\n\r\n## 🎨 Improvements\r\n\r\n- **Tabbed plugin page**: the page is split into **Updates** and **Settings** tabs.\r\n\r\n",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/mihaif7/jellyfin-plugin-update-notifier/releases/download/v1.3.0.0/updatenotifier_1.3.0.0_12.0.zip",
+        "checksum": "d4e465fdb81fa762a265bba8d0b2b8ce",
+        "timestamp": "2026-09-23T19:56:58.0000000Z"
       },
       {
         "version": "1.2.0.0",

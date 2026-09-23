@@ -13,7 +13,8 @@ namespace Jellyfin.Plugin.UpdateNotifier.Controllers;
 /// </summary>
 /// <remarks>
 /// Elevation is required at the controller level so an endpoint added later
-/// cannot accidentally be served anonymously.
+/// cannot accidentally be served anonymously. The badge's summary lives in
+/// <see cref="NoticeController"/>, which non-admin users can reach.
 /// </remarks>
 [ApiController]
 [Route("PluginUpdateNotifier")]
@@ -51,27 +52,6 @@ public class UpdateNotifierController : ControllerBase
             Dismissed = _tracker.IsDismissed(),
             Updates = _tracker.GetUpdates(),
             HistoryCount = _tracker.GetHistoryCount(),
-        };
-    }
-
-    /// <summary>
-    /// Gets just the counts the avatar badge needs.
-    /// </summary>
-    /// <remarks>
-    /// The badge is polled; <see cref="GetStatus"/> carries every changelog in
-    /// full, which the badge would only discard.
-    /// </remarks>
-    /// <response code="200">Summary returned.</response>
-    /// <returns>The summary payload.</returns>
-    [HttpGet("summary")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public ActionResult<SummaryResponse> GetSummary()
-    {
-        return new SummaryResponse
-        {
-            PendingRestart = _applicationHost.HasPendingRestart,
-            Dismissed = _tracker.IsDismissed(),
-            Count = _tracker.GetUpdateCount(),
         };
     }
 

@@ -27,10 +27,16 @@
   <img alt="Plugin Updates dashboard page" src="docs/images/dashboard.png" width="45%" />
 </p>
 
+<p align="center">
+  <img alt="Badge and profile-menu entry for a notified non-admin user" src="docs/images/badge-non-admin.jpg" width="45%" />
+  <img alt="Settings tab for choosing notified users" src="docs/images/settings.png" width="45%" />
+</p>
+
 ## ✨ Features
 
 - **Avatar badge**: a dot on the admin's profile avatar the moment a plugin change leaves a restart pending.
-- **Profile-menu entry**: *Plugin Updates (N)* in the user dropdown, shown only to administrators.
+- **Profile-menu entry**: *Plugin Updates (N)* in the user dropdown, for administrators and the users you choose.
+- **Notified users**: tick non-admin users on the plugin's *Settings* tab to show them the badge too. They see only how many plugins changed, and hovering the entry tells them to sign in as an administrator.
 - **Dashboard page**: lists every changed plugin, its old → new version, and the release changelog, themed to match your server.
 - **Installs, updates and removals**: uninstalling a plugin needs a restart too, so removals are tracked and badged like any other change.
 - **History**: each restart files the changes it applied into *Previously applied*, so you can still see what landed last week when something starts misbehaving.
@@ -74,12 +80,6 @@ extract it into `<config>/plugins/Plugin Update Notifier_<version>/`, and restar
 Bug reports and feature requests are welcome via the
 [issue tracker](https://github.com/mihaif7/jellyfin-plugin-update-notifier/issues).
 Pull requests that keep within the plugin's scope are happily reviewed.
-
-Build with the .NET 10 SDK:
-
-```sh
-dotnet build src -c Release
-```
 
 ## 📝 License
 

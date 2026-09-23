@@ -5,7 +5,7 @@
     <title>Plugin Updates</title>
 </head>
 <body>
-    <div id="UpdateNotifierPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-button">
+    <div id="UpdateNotifierPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-button,emby-checkbox">
         <style>
             /* Jellyfin ships several themes that each swap a whole theme.css with
                hardcoded colours, so there is no variable contract to lean on. Define
@@ -22,6 +22,9 @@
                     color-mix(in srgb, var(--primary-accent-color, #00a4dc) 22%, transparent) 0%,
                     rgba(255, 255, 255, 0.02) 100%);
                 --pun-shadow:        0 6px 22px rgba(0, 0, 0, 0.22);
+                --pun-tab:           rgba(255, 255, 255, 0.06);
+                --pun-tab-hover:     rgba(255, 255, 255, 0.11);
+                --pun-tab-text:      #ccc;
                 color: inherit;
             }
 
@@ -36,6 +39,9 @@
                         color-mix(in srgb, var(--primary-accent-color, #00a4dc) 18%, transparent) 0%,
                         rgba(0, 0, 0, 0.01) 100%);
                     --pun-shadow:        0 6px 22px rgba(0, 0, 0, 0.1);
+                    --pun-tab:           rgba(0, 0, 0, 0.05);
+                    --pun-tab-hover:     rgba(0, 0, 0, 0.1);
+                    --pun-tab-text:      rgba(0, 0, 0, 0.75);
                 }
             }
 
@@ -44,6 +50,58 @@
                other dashboard page and stays symmetric instead of stopping short
                on the right. */
             #UpdateNotifierPage .pun-wrap { width: 100%; }
+
+            /* Tabs: Jellyfin Enhanced's pill bar, so the two plugins read as
+               one family on the dashboard. */
+            #UpdateNotifierPage .pun-head {
+                padding: 10px 0;
+                border-bottom: 1px solid var(--pun-border);
+            }
+            #UpdateNotifierPage .pun-head .sectionTitle { margin: 0; }
+            #UpdateNotifierPage .pun-tab-bar {
+                display: flex;
+                gap: 10px;
+                padding: 12px 0;
+                margin: 0 0 22px;
+                border-bottom: 1px solid var(--pun-border);
+                overflow-x: auto;
+                scrollbar-width: none;
+            }
+            #UpdateNotifierPage .pun-tab-bar::-webkit-scrollbar { display: none; }
+            #UpdateNotifierPage .pun-tab {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
+                border: 1px solid var(--pun-border);
+                border-radius: 30px;
+                background: var(--pun-tab);
+                color: var(--pun-tab-text);
+                font: inherit;
+                font-size: 0.9em;
+                font-weight: 600;
+                white-space: nowrap;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            #UpdateNotifierPage .pun-tab:hover { background: var(--pun-tab-hover); }
+            #UpdateNotifierPage .pun-tab .material-icons {
+                font-size: 20px !important;
+                line-height: 1;
+                opacity: 0.85;
+            }
+            #UpdateNotifierPage .pun-tab.active {
+                background: var(--primary-accent-color, #00a4dc);
+                border-color: var(--primary-accent-color, #00a4dc);
+                color: #fff;
+                box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-accent-color, #00a4dc) 30%, transparent);
+            }
+            #UpdateNotifierPage .pun-tab.active .material-icons { opacity: 1; }
+
+            /* Jellyfin caps plugin-page forms; the card should span like the update cards. */
+            #UpdateNotifierPage #punSettingsForm { max-width: none; }
+            #UpdateNotifierPage .pun-users .checkboxContainer { margin: 0 0 0.4em; }
+            #UpdateNotifierPage .pun-settings-actions { margin-top: 20px; }
 
             #UpdateNotifierPage .pun-summary {
                 color: var(--pun-text-muted);
@@ -180,13 +238,14 @@
             }
 
             #UpdateNotifierPage .pun-footer { margin-top: 24px; }
-            #UpdateNotifierPage .pun-dismiss-hint {
-                margin: 10px 0 0;
-                max-width: 640px;
+            /* Explanatory notes run the full width, like the cards around them. */
+            #UpdateNotifierPage .pun-hint {
+                margin: 0 0 16px;
                 color: var(--pun-text-subtle);
                 font-size: 0.85em;
                 line-height: 1.5;
             }
+            #UpdateNotifierPage .pun-dismiss-hint { margin: 10px 0 0; }
             #UpdateNotifierPage .pun-modal {
                 position: fixed;
                 inset: 0;
@@ -241,13 +300,6 @@
                 transition: transform 0.2s ease;
             }
             #UpdateNotifierPage .pun-history-toggle[aria-expanded="true"] .material-icons { transform: rotate(90deg); }
-            #UpdateNotifierPage .pun-history-hint {
-                margin: 0 0 16px;
-                max-width: 640px;
-                color: var(--pun-text-subtle);
-                font-size: 0.85em;
-                line-height: 1.5;
-            }
             #UpdateNotifierPage .pun-history-group {
                 margin: 22px 0 12px;
                 color: var(--pun-text-muted);
@@ -277,56 +329,94 @@
                 #UpdateNotifierPage .pun-banner { flex-wrap: wrap; }
                 #UpdateNotifierPage .pun-card-head { padding: 12px 16px; }
                 #UpdateNotifierPage .pun-card-body { padding: 16px; }
+                #UpdateNotifierPage .pun-tab { padding: 8px 14px; }
             }
         </style>
 
         <div data-role="content">
             <div class="content-primary">
                 <div class="pun-wrap">
-                    <h2 class="sectionTitle">Plugin Updates</h2>
-                    <p class="pun-summary" id="punSummary">Loading&hellip;</p>
+                    <div class="pun-head">
+                        <h2 class="sectionTitle">Plugin Updates</h2>
+                    </div>
+                    <div class="pun-tab-bar" role="tablist">
+                        <button type="button" class="pun-tab active" role="tab" id="punTabUpdates" data-tab="punUpdatesPanel" aria-selected="true" aria-controls="punUpdatesPanel">
+                            <span class="material-icons" aria-hidden="true">system_update_alt</span>Updates
+                        </button>
+                        <button type="button" class="pun-tab" role="tab" id="punTabSettings" data-tab="punSettingsPanel" aria-selected="false" aria-controls="punSettingsPanel">
+                            <span class="material-icons" aria-hidden="true">settings</span>Settings
+                        </button>
+                    </div>
 
-                    <div id="punRestartNotice" class="pun-banner" style="display:none;">
-                        <span class="material-icons pun-banner-icon" aria-hidden="true">restart_alt</span>
-                        <div class="pun-banner-body">
-                            <div class="pun-banner-title">A server restart is required</div>
-                            <div class="pun-banner-text">
-                                The plugins below were installed, updated or removed since the last restart, and those changes are not live yet.
+                    <div id="punUpdatesPanel" role="tabpanel" aria-labelledby="punTabUpdates">
+                        <p class="pun-summary" id="punSummary">Loading&hellip;</p>
+
+                        <div id="punRestartNotice" class="pun-banner" style="display:none;">
+                            <span class="material-icons pun-banner-icon" aria-hidden="true">restart_alt</span>
+                            <div class="pun-banner-body">
+                                <div class="pun-banner-title">A server restart is required</div>
+                                <div class="pun-banner-text">
+                                    The plugins below were installed, updated or removed since the last restart, and those changes are not live yet.
+                                </div>
+                            </div>
+                            <button is="emby-button" type="button" id="punRestart" class="raised button-submit pun-restart-btn">
+                                <span>Restart server</span>
+                            </button>
+                        </div>
+
+                        <div id="punList" class="pun-list"></div>
+
+                        <div class="pun-footer">
+                            <button is="emby-button" type="button" id="punDismiss" class="raised" style="display:none;">
+                                <span>Dismiss notification</span>
+                            </button>
+                            <p class="pun-hint pun-dismiss-hint" id="punDismissHint" style="display:none;">
+                                Hides the badge on your avatar and the profile-menu entry. The restart reminder and the list
+                                below stay until you restart, and the badge returns if another plugin changes.
+                            </p>
+                        </div>
+
+                        <div class="pun-history" id="punHistory" style="display:none;">
+                            <button type="button" class="pun-history-toggle" id="punHistoryToggle" aria-expanded="false" aria-controls="punHistoryBody">
+                                <span class="material-icons" aria-hidden="true">chevron_right</span>
+                                <span id="punHistoryLabel">Previously applied</span>
+                            </button>
+                            <div id="punHistoryBody" style="display:none;">
+                                <p class="pun-hint">
+                                    Changes that went live at an earlier restart, newest first. Kept for the last 50 records.
+                                </p>
+                                <div id="punHistoryList" class="pun-list"></div>
+                                <div class="pun-history-actions">
+                                    <button is="emby-button" type="button" id="punHistoryClear" class="raised">
+                                        <span>Clear history</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <button is="emby-button" type="button" id="punRestart" class="raised button-submit pun-restart-btn">
-                            <span>Restart server</span>
-                        </button>
                     </div>
 
-                    <div id="punList" class="pun-list"></div>
-
-                    <div class="pun-footer">
-                        <button is="emby-button" type="button" id="punDismiss" class="raised" style="display:none;">
-                            <span>Dismiss notification</span>
-                        </button>
-                        <p class="pun-dismiss-hint" id="punDismissHint" style="display:none;">
-                            Hides the badge on your avatar and the profile-menu entry. The restart reminder and the list
-                            below stay until you restart, and the badge returns if another plugin changes.
-                        </p>
-                    </div>
-
-                    <div class="pun-history" id="punHistory" style="display:none;">
-                        <button type="button" class="pun-history-toggle" id="punHistoryToggle" aria-expanded="false" aria-controls="punHistoryBody">
-                            <span class="material-icons" aria-hidden="true">chevron_right</span>
-                            <span id="punHistoryLabel">Previously applied</span>
-                        </button>
-                        <div id="punHistoryBody" style="display:none;">
-                            <p class="pun-history-hint">
-                                Changes that went live at an earlier restart, newest first. Kept for the last 50 records.
-                            </p>
-                            <div id="punHistoryList" class="pun-list"></div>
-                            <div class="pun-history-actions">
-                                <button is="emby-button" type="button" id="punHistoryClear" class="raised">
-                                    <span>Clear history</span>
+                    <div id="punSettingsPanel" role="tabpanel" aria-labelledby="punTabSettings" style="display:none;">
+                        <form id="punSettingsForm">
+                            <div class="pun-card">
+                                <div class="pun-card-head">
+                                    <span class="material-icons pun-card-icon" aria-hidden="true">group</span>
+                                    <span class="pun-card-name">Notified users</span>
+                                </div>
+                                <div class="pun-card-body">
+                                    <p class="pun-hint">
+                                        Administrators always see the badge on their avatar. Tick a user to show it to
+                                        them as well. They see only how many plugins are waiting for a restart, never
+                                        which ones, and cannot dismiss the notice or restart the server.
+                                    </p>
+                                    <div id="punUsers" class="pun-users"></div>
+                                </div>
+                            </div>
+                            <div class="pun-settings-actions">
+                                <button is="emby-button" type="submit" class="raised button-submit" id="punSettingsSave" disabled>
+                                    <span>Save</span>
                                 </button>
                             </div>
-                        </div>
+                        </form>
                     </div>
 
                     <div id="punConfirm" class="pun-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="punConfirmTitle">
@@ -346,6 +436,7 @@
 
         <script type="text/javascript">
             (function () {
+                var PLUGIN_ID = 'b6a1c3f2-5d84-4e77-9d2a-7f1c8e4b3a91';
                 var page = document.querySelector('#UpdateNotifierPage');
 
                 function esc(s) {
@@ -598,6 +689,98 @@
                 }
 
                 page.addEventListener('pageshow', load);
+
+                // Guids come back without dashes from one serializer and with
+                // them from the other; compare them bare.
+                function normId(id) {
+                    return String(id || '').replace(/-/g, '').toLowerCase();
+                }
+
+                function renderUsers(users, selected) {
+                    var chosen = {};
+                    selected.forEach(function (id) { chosen[normId(id)] = true; });
+
+                    // Admins are left out: they always get the badge.
+                    var others = users.filter(function (u) {
+                        return !(u.Policy && u.Policy.IsAdministrator);
+                    });
+                    others.sort(function (a, b) { return String(a.Name).localeCompare(String(b.Name)); });
+
+                    var list = page.querySelector('#punUsers');
+                    if (!others.length) {
+                        list.innerHTML = '<div class="punLogNone">Every user on this server is an administrator.</div>';
+                        return;
+                    }
+
+                    list.innerHTML = others.map(function (u) {
+                        return '<div class="checkboxContainer"><label>'
+                            + '<input is="emby-checkbox" type="checkbox" class="punUser" data-id="' + esc(u.Id) + '"'
+                            + (chosen[normId(u.Id)] ? ' checked' : '') + '>'
+                            + '<span>' + esc(u.Name) + '</span>'
+                            + '</label></div>';
+                    }).join('');
+                }
+
+                var settingsLoaded = false;
+
+                // Save stays off until the list is on screen: saving an
+                // empty or half-drawn list would untick everyone.
+                function setSettingsLoaded(loaded) {
+                    settingsLoaded = loaded;
+                    page.querySelector('#punSettingsSave').disabled = !loaded;
+                }
+
+                function loadSettings() {
+                    setSettingsLoaded(false);
+                    Dashboard.showLoadingMsg();
+                    Promise.all([ApiClient.getUsers(), ApiClient.getPluginConfiguration(PLUGIN_ID)])
+                        .then(function (res) {
+                            renderUsers(res[0] || [], (res[1] && res[1].NotifyUserIds) || []);
+                            setSettingsLoaded(true);
+                            Dashboard.hideLoadingMsg();
+                        })
+                        .catch(function () {
+                            page.querySelector('#punUsers').innerHTML =
+                                '<div class="punLogNone">Could not load the users.</div>';
+                            Dashboard.hideLoadingMsg();
+                        });
+                }
+
+                function showTab(panelId) {
+                    Array.prototype.forEach.call(page.querySelectorAll('.pun-tab'), function (tab) {
+                        var on = tab.getAttribute('data-tab') === panelId;
+                        tab.classList.toggle('active', on);
+                        tab.setAttribute('aria-selected', on ? 'true' : 'false');
+                        page.querySelector('#' + tab.getAttribute('data-tab')).style.display = on ? '' : 'none';
+                    });
+                    // Refetched on every visit, so users added meanwhile show up.
+                    if (panelId === 'punSettingsPanel') loadSettings();
+                }
+
+                Array.prototype.forEach.call(page.querySelectorAll('.pun-tab'), function (tab) {
+                    tab.addEventListener('click', function () {
+                        showTab(tab.getAttribute('data-tab'));
+                    });
+                });
+
+                page.querySelector('#punSettingsForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    if (!settingsLoaded) return false;
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(PLUGIN_ID).then(function (config) {
+                        config.NotifyUserIds = Array.prototype.map.call(
+                            page.querySelectorAll('.punUser:checked'),
+                            function (box) { return box.getAttribute('data-id'); });
+                        return ApiClient.updatePluginConfiguration(PLUGIN_ID, config);
+                    }).then(function (result) {
+                        Dashboard.processPluginConfigurationUpdateResult(result);
+                    }, function () {
+                        Dashboard.hideLoadingMsg();
+                        page.querySelector('#punUsers').insertAdjacentHTML('beforeend',
+                            '<div class="punLogNone">Could not save the settings.</div>');
+                    });
+                    return false;
+                });
 
                 page.querySelector('#punDismiss').addEventListener('click', function () {
                     ApiClient.ajax({

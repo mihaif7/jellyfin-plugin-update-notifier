@@ -8,15 +8,21 @@
  * id="app-user-menu"; both are stable, unlike the build-generated emotion class
  * names, which is why the menu entry clones its classes from a real MenuItem.
  *
- * The injector serves this script to every signed-in session, so nothing here
- * touches the network or the DOM until the session is known to be an admin's.
+ * The injector serves this script to every signed-in session. Admins poll the
+ * summary; any other user asks once, and a 403 (not on the plugin's Settings
+ * list) keeps them quiet until PROBE_MS later, so the admin's choice lands
+ * without a reload.
  */
 (function () {
     var MENU_ID = 'app-user-menu';
     var BUTTON_SELECTOR = 'button[aria-controls="' + MENU_ID + '"]';
     var PAGE_HREF = '#/configurationpage?name=UpdateNotifier';
+    var DASHBOARD_SELECTOR = 'a[href$="/dashboard"]';
+    var SETTINGS_SELECTOR = 'a[href$="/mypreferencesmenu"]';
     var BADGE_CLASS = 'pluginUpdateNotifierBadge';
     var ITEM_CLASS = 'pluginUpdateNotifierItem';
+    var POPUP_CLASS = 'pluginUpdateNotifierPopup';
+    var NOTICE_HINT = 'Sign in with an administrator account to restart the server and apply these plugin changes.';
 
     // A restart pending "at some point" does not need catching sooner.
     var POLL_MS = 300000;
@@ -24,6 +30,7 @@
     var WAIT_MS = 5000;
     var IDLE_MS = 60000;
     var MENU_MS = 10000;
+    var PROBE_MS = 1800000;
 
     var pending = false;
     var count = 0;
@@ -36,6 +43,7 @@
     var nextDue = 0;
     var userId = null;
     var admin = null;
+    var notified = false;
     var resolving = false;
 
     function injectStyle() {
@@ -48,7 +56,16 @@
             'pointer-events:none;z-index:1}' +
             '.' + BADGE_CLASS + 'Host{position:relative}' +
             '.' + ITEM_CLASS + ' .' + BADGE_CLASS + '{position:static;margin-left:8px;' +
-            'display:inline-block;box-shadow:none;vertical-align:middle}';
+            'display:inline-block;box-shadow:none;vertical-align:middle}' +
+            // A non-admin's entry leads nowhere, so it drops the hover
+            // highlight and shows a help cursor; hovering it explains why.
+            // !important on both: themes force their own cursor on menu items.
+            '.' + ITEM_CLASS + '[aria-disabled="true"],.' + ITEM_CLASS + '[aria-disabled="true"] *{cursor:help !important}' +
+            '.' + ITEM_CLASS + '[aria-disabled="true"]:hover{background-color:transparent !important}' +
+            // Above MUI's popover layer (1300), which holds the menu.
+            '.' + POPUP_CLASS + '{position:fixed;z-index:1500;max-width:240px;padding:8px 12px;' +
+            'border-radius:6px;background:rgba(32,32,32,.97);color:#fff;font-size:.8rem;line-height:1.45;' +
+            'box-shadow:0 6px 18px rgba(0,0,0,.45);pointer-events:none}';
         document.head.appendChild(style);
     }
 
@@ -83,7 +100,13 @@
         item.className = dashboardLink.className + ' ' + ITEM_CLASS;
         item.setAttribute('role', 'menuitem');
         item.setAttribute('tabindex', '-1');
-        item.href = PAGE_HREF;
+        // Non-admins cannot open the dashboard page. aria-disabled also makes
+        // MUI's keyboard navigation skip the entry.
+        if (admin) {
+            item.href = PAGE_HREF;
+        } else {
+            item.setAttribute('aria-disabled', 'true');
+        }
 
         var iconWrap = document.createElement('div');
         var srcIcon = dashboardLink.querySelector('.MuiListItemIcon-root');
@@ -108,13 +131,61 @@
         item.appendChild(textWrap);
         item.appendChild(makeBadge());
 
-        // Closing the menu is the host's job; clicking the backdrop does it.
-        item.addEventListener('click', function () {
-            var backdrop = document.querySelector('#' + MENU_ID + ' .MuiBackdrop-root');
-            if (backdrop) backdrop.click();
+        if (admin) {
+            // Closing the menu is the host's job; clicking the backdrop does it.
+            item.addEventListener('click', function () {
+                var backdrop = document.querySelector('#' + MENU_ID + ' .MuiBackdrop-root');
+                if (backdrop) backdrop.click();
+            });
+            return item;
+        }
+
+        item.setAttribute('aria-description', NOTICE_HINT);
+        item.addEventListener('mouseenter', function () { showPopup(item); });
+        item.addEventListener('mouseleave', hidePopup);
+        // Touch screens have no hover: a tap shows it instead, and a tap
+        // anywhere else hides it. Not a toggle, since a tap also fires the
+        // mouseenter above and would close what it just opened.
+        item.addEventListener('click', function (e) {
+            e.preventDefault();
+            showPopup(item);
         });
 
         return item;
+    }
+
+    var popup = null;
+
+    // Rendered on the body rather than inside the menu, whose paper clips
+    // its overflow.
+    function showPopup(anchor) {
+        if (!popup) {
+            popup = document.createElement('div');
+            popup.className = POPUP_CLASS;
+            popup.setAttribute('aria-hidden', 'true');
+            popup.textContent = NOTICE_HINT;
+        }
+        // Measured at the origin: left where it was last shown, it would
+        // shrink to fit the space remaining there.
+        popup.style.left = '0px';
+        popup.style.top = '0px';
+        document.body.appendChild(popup);
+
+        // Centred below the entry, kept inside the viewport.
+        var rect = anchor.getBoundingClientRect();
+        var left = rect.left + (rect.width - popup.offsetWidth) / 2;
+        if (left + popup.offsetWidth > window.innerWidth - 8) left = window.innerWidth - 8 - popup.offsetWidth;
+        if (left < 8) left = 8;
+        var top = rect.bottom + 4;
+        if (top + popup.offsetHeight > window.innerHeight - 8) {
+            top = rect.top - popup.offsetHeight - 4;
+        }
+        popup.style.left = left + 'px';
+        popup.style.top = top + 'px';
+    }
+
+    function hidePopup() {
+        if (popup && popup.parentNode) popup.parentNode.removeChild(popup);
     }
 
     function syncMenuItem() {
@@ -125,6 +196,7 @@
 
         if (!pending) {
             if (existing) existing.remove();
+            hidePopup();
             return;
         }
 
@@ -138,13 +210,13 @@
             return;
         }
 
-        // Anchoring to the Dashboard entry keeps this out of non-admin menus,
-        // since that entry only renders for administrators.
-        var dashboardLink = menu.querySelector('a[href$="/dashboard"]');
-        if (!dashboardLink) return;
+        // Admins get it above Dashboard, which only renders for them; anyone
+        // else below Settings. Either entry also supplies the MUI classes.
+        var anchor = menu.querySelector(admin ? DASHBOARD_SELECTOR : SETTINGS_SELECTOR);
+        if (!anchor) return;
 
         injectStyle();
-        dashboardLink.parentNode.insertBefore(buildItem(dashboardLink), dashboardLink);
+        anchor.parentNode.insertBefore(buildItem(anchor), admin ? anchor : anchor.nextSibling);
     }
 
     function sync() {
@@ -220,6 +292,7 @@
         // status carries every plugin's changelog in full alongside them.
         client.getJSON(client.getUrl('PluginUpdateNotifier/summary'))
             .then(function (summary) {
+                notified = true;
                 var n = (summary && summary.Count) || 0;
                 apply(
                     !!(summary && summary.PendingRestart) && n > 0 && !summary.Dismissed,
@@ -227,10 +300,17 @@
                 scheduleNext();
             })
             .catch(function (err) {
-                // Elevation failed: re-resolve rather than retry a doomed request.
-                if (err && (err.status === 401 || err.status === 403)) admin = null;
+                notified = false;
                 apply(false, 0);
-                nextDue = Date.now() + RETRY_MS;
+                var denied = err && (err.status === 401 || err.status === 403);
+                // Not on the list: ask again much later. An admin denied has
+                // likely been demoted, so re-resolve rather than retry.
+                if (denied && !admin) {
+                    nextDue = Date.now() + PROBE_MS;
+                } else {
+                    if (denied) admin = null;
+                    nextDue = Date.now() + RETRY_MS;
+                }
                 scheduleNext();
             });
     }
@@ -245,6 +325,7 @@
         if (id !== userId) {
             userId = id;
             admin = null;
+            notified = false;
             lastFetch = 0;
             nextDue = 0;
             apply(false, 0);
@@ -272,12 +353,6 @@
             return;
         }
 
-        if (!admin) {
-            // Nothing to ask for: the endpoint would answer 403 every time.
-            schedule(IDLE_MS);
-            return;
-        }
-
         if (nextDue - Date.now() > 0) {
             scheduleNext();
             return;
@@ -298,9 +373,11 @@
         });
 
         document.addEventListener('click', function (e) {
-            if (!admin) return;
             var t = e.target;
+            // A tap outside the entry, the backdrop included, closes the popup.
+            if (!t || !t.closest || !t.closest('.' + ITEM_CLASS)) hidePopup();
             if (!t || !t.closest || !t.closest(BUTTON_SELECTOR)) return;
+            if (!notified) return;
             if (Date.now() - lastFetch < MENU_MS) return;
             var client = api();
             if (client) refresh(client);

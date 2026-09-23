@@ -656,7 +656,10 @@
                             ApiClient.ajax({
                                 type: 'POST',
                                 url: ApiClient.getUrl('PluginUpdateNotifier/history/clear')
-                            }).then(load);
+                            }).then(load, function () {
+                                page.querySelector('#punHistoryList').innerHTML =
+                                    '<div class="punLogNone">Could not clear the history.</div>';
+                            });
                         });
                 });
             })();

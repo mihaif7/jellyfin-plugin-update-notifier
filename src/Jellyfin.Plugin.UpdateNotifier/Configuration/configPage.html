@@ -100,12 +100,6 @@
 
             /* Jellyfin caps plugin-page forms; the card should span like the update cards. */
             #UpdateNotifierPage #punSettingsForm { max-width: none; }
-            #UpdateNotifierPage .pun-settings-hint {
-                margin: 0 0 16px;
-                color: var(--pun-text-subtle);
-                font-size: 0.85em;
-                line-height: 1.5;
-            }
             #UpdateNotifierPage .pun-users .checkboxContainer { margin: 0 0 0.4em; }
             #UpdateNotifierPage .pun-settings-actions { margin-top: 20px; }
 
@@ -244,13 +238,14 @@
             }
 
             #UpdateNotifierPage .pun-footer { margin-top: 24px; }
-            #UpdateNotifierPage .pun-dismiss-hint {
-                margin: 10px 0 0;
-                max-width: 640px;
+            /* Explanatory notes run the full width, like the cards around them. */
+            #UpdateNotifierPage .pun-hint {
+                margin: 0 0 16px;
                 color: var(--pun-text-subtle);
                 font-size: 0.85em;
                 line-height: 1.5;
             }
+            #UpdateNotifierPage .pun-dismiss-hint { margin: 10px 0 0; }
             #UpdateNotifierPage .pun-modal {
                 position: fixed;
                 inset: 0;
@@ -305,13 +300,6 @@
                 transition: transform 0.2s ease;
             }
             #UpdateNotifierPage .pun-history-toggle[aria-expanded="true"] .material-icons { transform: rotate(90deg); }
-            #UpdateNotifierPage .pun-history-hint {
-                margin: 0 0 16px;
-                max-width: 640px;
-                color: var(--pun-text-subtle);
-                font-size: 0.85em;
-                line-height: 1.5;
-            }
             #UpdateNotifierPage .pun-history-group {
                 margin: 22px 0 12px;
                 color: var(--pun-text-muted);
@@ -382,7 +370,7 @@
                             <button is="emby-button" type="button" id="punDismiss" class="raised" style="display:none;">
                                 <span>Dismiss notification</span>
                             </button>
-                            <p class="pun-dismiss-hint" id="punDismissHint" style="display:none;">
+                            <p class="pun-hint pun-dismiss-hint" id="punDismissHint" style="display:none;">
                                 Hides the badge on your avatar and the profile-menu entry. The restart reminder and the list
                                 below stay until you restart, and the badge returns if another plugin changes.
                             </p>
@@ -394,7 +382,7 @@
                                 <span id="punHistoryLabel">Previously applied</span>
                             </button>
                             <div id="punHistoryBody" style="display:none;">
-                                <p class="pun-history-hint">
+                                <p class="pun-hint">
                                     Changes that went live at an earlier restart, newest first. Kept for the last 50 records.
                                 </p>
                                 <div id="punHistoryList" class="pun-list"></div>
@@ -415,7 +403,7 @@
                                     <span class="pun-card-name">Notified users</span>
                                 </div>
                                 <div class="pun-card-body">
-                                    <p class="pun-settings-hint">
+                                    <p class="pun-hint">
                                         Administrators always see the badge on their avatar. Tick a user to show it to
                                         them as well. They see only how many plugins are waiting for a restart, never
                                         which ones, and cannot dismiss the notice or restart the server.

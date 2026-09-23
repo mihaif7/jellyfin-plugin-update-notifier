@@ -412,7 +412,7 @@
                                 </div>
                             </div>
                             <div class="pun-settings-actions">
-                                <button is="emby-button" type="submit" class="raised button-submit">
+                                <button is="emby-button" type="submit" class="raised button-submit" id="punSettingsSave" disabled>
                                     <span>Save</span>
                                 </button>
                             </div>
@@ -721,11 +721,22 @@
                     }).join('');
                 }
 
+                var settingsLoaded = false;
+
+                // Save stays off until the list is on screen: saving an
+                // empty or half-drawn list would untick everyone.
+                function setSettingsLoaded(loaded) {
+                    settingsLoaded = loaded;
+                    page.querySelector('#punSettingsSave').disabled = !loaded;
+                }
+
                 function loadSettings() {
+                    setSettingsLoaded(false);
                     Dashboard.showLoadingMsg();
                     Promise.all([ApiClient.getUsers(), ApiClient.getPluginConfiguration(PLUGIN_ID)])
                         .then(function (res) {
                             renderUsers(res[0] || [], (res[1] && res[1].NotifyUserIds) || []);
+                            setSettingsLoaded(true);
                             Dashboard.hideLoadingMsg();
                         })
                         .catch(function () {
@@ -754,6 +765,7 @@
 
                 page.querySelector('#punSettingsForm').addEventListener('submit', function (e) {
                     e.preventDefault();
+                    if (!settingsLoaded) return false;
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(PLUGIN_ID).then(function (config) {
                         config.NotifyUserIds = Array.prototype.map.call(

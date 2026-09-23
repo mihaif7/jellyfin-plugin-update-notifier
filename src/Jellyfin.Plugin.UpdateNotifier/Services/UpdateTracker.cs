@@ -358,6 +358,11 @@ public class UpdateTracker
         {
             using var document = JsonDocument.Parse(File.ReadAllText(path));
             var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                throw new JsonException($"Expected an object at the root, found {root.ValueKind}.");
+            }
+
             _state = new TrackerState
             {
                 Updates = ReadRecords(root, "Updates"),

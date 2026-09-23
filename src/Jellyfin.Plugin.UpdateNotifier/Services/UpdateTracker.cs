@@ -400,6 +400,14 @@ public class UpdateTracker
                 var record = element.Deserialize<PluginUpdateRecord>(_jsonOptions);
                 if (record is not null)
                 {
+                    // Written before Kind existed, when IsUpdate marked an update.
+                    if (!element.TryGetProperty(nameof(PluginUpdateRecord.Kind), out _)
+                        && element.TryGetProperty("IsUpdate", out var isUpdate)
+                        && isUpdate.ValueKind == JsonValueKind.True)
+                    {
+                        record.Kind = PluginChangeKind.Updated;
+                    }
+
                     records.Add(record);
                 }
             }

@@ -41,6 +41,7 @@ public class UpdateNotifierPlugin : BasePlugin<PluginConfiguration>, IHasWebPage
         "Badges the admin avatar and adds a profile-menu entry when plugins are installed, "
         + "updated or removed and the server needs a restart, with a dashboard page listing "
         + "what changed, each release's changelog, and a history of what earlier restarts applied. "
+        + "Admins can also show the badge to chosen non-admin users. "
         + "Source, docs and issues: https://github.com/mihaif7/jellyfin-plugin-update-notifier";
 
     /// <inheritdoc />

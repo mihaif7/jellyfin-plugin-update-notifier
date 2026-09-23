@@ -33,6 +33,7 @@ public class UpdateTracker
 
     private TrackerState _state = new();
     private bool _loaded;
+    private bool _archived;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UpdateTracker"/> class.
@@ -263,10 +264,20 @@ public class UpdateTracker
     /// Moves the pending records into the history. Called once the server has
     /// restarted, which is the moment those changes became live.
     /// </summary>
+    /// <remarks>
+    /// Runs once per server start: the startup task can also be run by hand from
+    /// Scheduled Tasks, and nothing pending then has gone live.
+    /// </remarks>
     public void ArchiveCurrent()
     {
         lock (_stateLock)
         {
+            if (_archived)
+            {
+                return;
+            }
+
+            _archived = true;
             EnsureLoaded();
 
             if (_state.Updates.Count > 0)

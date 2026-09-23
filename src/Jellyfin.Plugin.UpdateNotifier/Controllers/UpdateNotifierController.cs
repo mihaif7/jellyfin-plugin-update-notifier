@@ -46,11 +46,11 @@ public class UpdateNotifierController : ControllerBase
     {
         return new StatusResponse
         {
-            // Maintained by the server: InstallationManager calls
-            // NotifyPendingRestart() after every successful install.
+            // Set by InstallationManager, after an install and on uninstall alike.
             PendingRestart = _applicationHost.HasPendingRestart,
             Dismissed = _tracker.IsDismissed(),
             Updates = _tracker.GetUpdates(),
+            HistoryCount = _tracker.GetHistoryCount(),
         };
     }
 
@@ -73,6 +73,31 @@ public class UpdateNotifierController : ControllerBase
             Dismissed = _tracker.IsDismissed(),
             Count = _tracker.GetUpdateCount(),
         };
+    }
+
+    /// <summary>
+    /// Gets the records archived by previous restarts, newest first.
+    /// </summary>
+    /// <response code="200">History returned.</response>
+    /// <returns>The history payload.</returns>
+    [HttpGet("history")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult<HistoryResponse> GetHistory()
+    {
+        return new HistoryResponse { Records = _tracker.GetHistory() };
+    }
+
+    /// <summary>
+    /// Discards the archived records.
+    /// </summary>
+    /// <response code="204">History cleared.</response>
+    /// <returns>No content.</returns>
+    [HttpPost("history/clear")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public ActionResult ClearHistory()
+    {
+        _tracker.ClearHistory();
+        return NoContent();
     }
 
     /// <summary>

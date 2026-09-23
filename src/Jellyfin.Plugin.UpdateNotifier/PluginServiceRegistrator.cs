@@ -22,6 +22,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<IEventConsumer<PluginInstallingEventArgs>, PluginUpdateEventConsumer>();
         serviceCollection.AddSingleton<IEventConsumer<PluginUpdatedEventArgs>, PluginUpdateEventConsumer>();
         serviceCollection.AddSingleton<IEventConsumer<PluginInstalledEventArgs>, PluginUpdateEventConsumer>();
+        serviceCollection.AddSingleton<IEventConsumer<PluginUninstalledEventArgs>, PluginUpdateEventConsumer>();
         serviceCollection.AddSingleton<IScheduledTask, StartupTask>();
     }
 }

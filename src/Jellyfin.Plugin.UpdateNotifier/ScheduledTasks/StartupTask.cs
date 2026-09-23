@@ -57,9 +57,7 @@ public class StartupTask : IScheduledTask
     /// <inheritdoc />
     public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
-        // Whatever was recorded before this restart is now live, so the notice
-        // clears on the first startup after it.
-        _tracker.Clear();
+        _tracker.ArchiveCurrent();
 
         RegisterClientScript();
 

@@ -5,9 +5,9 @@
 </p>
 
 <p align="center">
-  Badges the admin avatar and adds a profile-menu entry when plugins have been
-  updated and the server needs a restart, with a dashboard page listing what
-  changed and each release's changelog.
+  Badges the admin avatar and adds a profile-menu entry when plugins have
+  changed and the server needs a restart, with a dashboard page listing what
+  changed, each release's changelog, and the history of earlier restarts.
 </p>
 
 <p align="center">
@@ -19,7 +19,8 @@
 </p>
 
 > [!NOTE]
-> **Jellyfin 12 only.** The plugin uses APIs that do not exist in 10.x.
+> **Jellyfin 12 only.** The plugin uses APIs that do not exist in 10.x. Each
+> release is published for both 12.0 and 12.1, so either picks it up.
 
 <p align="center">
   <img alt="Avatar badge and profile-menu entry" src="docs/images/badge.jpg" width="45%" />
@@ -31,6 +32,8 @@
 - **Avatar badge**: a dot on the admin's profile avatar the moment a plugin change leaves a restart pending.
 - **Profile-menu entry**: *Plugin Updates (N)* in the user dropdown, shown only to administrators.
 - **Dashboard page**: lists every changed plugin, its old → new version, and the release changelog, themed to match your server.
+- **Installs, updates and removals**: uninstalling a plugin needs a restart too, so removals are tracked and badged like any other change.
+- **History**: each restart files the changes it applied into *Previously applied*, so you can still see what landed last week when something starts misbehaving.
 - **One-click dismiss**: dismissing is shared across every browser and device, not stored per-browser.
 - **Self-clearing**: the notice clears automatically on the next restart, since a restart is exactly what it was asking for.
 

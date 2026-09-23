@@ -14,7 +14,8 @@ namespace Jellyfin.Plugin.UpdateNotifier.EventConsumers;
 public class PluginUpdateEventConsumer :
     IEventConsumer<PluginInstallingEventArgs>,
     IEventConsumer<PluginUpdatedEventArgs>,
-    IEventConsumer<PluginInstalledEventArgs>
+    IEventConsumer<PluginInstalledEventArgs>,
+    IEventConsumer<PluginUninstalledEventArgs>
 {
     private readonly UpdateTracker _tracker;
     private readonly IPluginManager _pluginManager;
@@ -77,6 +78,20 @@ public class PluginUpdateEventConsumer :
         var info = eventArgs.Argument;
         _tracker.RecordUpdate(info.Id, info.Name, info.Version.ToString(), info.Changelog, info.SourceUrl);
         _logger.LogInformation("Recorded plugin change: {Name} {Version}", info.Name, info.Version);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Records a removal, which leaves a restart pending just as an install does.
+    /// </summary>
+    /// <param name="eventArgs">The event arguments.</param>
+    /// <returns>A task.</returns>
+    public Task OnEvent(PluginUninstalledEventArgs eventArgs)
+    {
+        ArgumentNullException.ThrowIfNull(eventArgs);
+        var info = eventArgs.Argument;
+        _tracker.RecordUninstall(info.Id, info.Name, info.Version.ToString());
+        _logger.LogInformation("Recorded plugin removal: {Name} {Version}", info.Name, info.Version);
         return Task.CompletedTask;
     }
 }

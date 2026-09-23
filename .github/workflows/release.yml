@@ -17,7 +17,10 @@ env:
   PROJECT: src/Jellyfin.Plugin.UpdateNotifier/Jellyfin.Plugin.UpdateNotifier.csproj
   ASSEMBLY: Jellyfin.Plugin.UpdateNotifier.dll
   OUT_DIR: src/Jellyfin.Plugin.UpdateNotifier/bin/Release/net10.0
-  TARGET_ABI: '12.0.0.0'
+  # One build, offered once per server generation: an entry only reaches
+  # servers at or above its targetAbi, and the universal repo badges an entry
+  # by an exact match. Add the next one here when a Jellyfin minor ships.
+  TARGET_ABIS: '12.1.0.0 12.0.0.0'
 
 jobs:
   release:
@@ -57,7 +60,6 @@ jobs:
           {
             echo "version=$VERSION"
             echo "tag=$TAG"
-            echo "zip=updatenotifier_${VERSION}.zip"
           } >> "$GITHUB_OUTPUT"
 
       - name: Ensure the release exists
@@ -99,59 +101,69 @@ jobs:
         run: dotnet build "$PROJECT" --configuration Release
 
       - name: Package
-        id: pkg
         env:
           V: ${{ steps.v.outputs.version }}
-          ZIP: ${{ steps.v.outputs.zip }}
+          TAG: ${{ steps.v.outputs.tag }}
         run: |
           set -euo pipefail
           TS="$(date -u +%Y-%m-%dT%H:%M:%S.0000000Z)"
 
-          # meta.json travels inside the zip so Jellyfin can identify the plugin.
-          # Its descriptive fields come from manifest.json, the single source of
-          # truth for them. --rawfile keeps the notes as data, never as shell.
-          jq --arg v "$V" --arg ts "$TS" --arg abi "$TARGET_ABI" --arg dll "$ASSEMBLY" \
-             --rawfile log release-notes.txt '
-             .[0] | {
-               category, description, guid, name, overview, owner,
-               changelog: $log,
-               targetAbi: $abi,
-               timestamp: $ts,
-               version: $v,
-               status: "Active",
-               autoUpdate: true,
-               assemblies: [$dll]
-             }' manifest.json > "$OUT_DIR/meta.json"
-
           DIST="$GITHUB_WORKSPACE/dist"
           mkdir -p "$DIST"
-          # Create the archive with a relative name inside the output dir, then
-          # move it: the runner's zip mishandles an absolute archive path.
-          ( cd "$OUT_DIR" && rm -f "$ZIP" && zip -j "$ZIP" "$ASSEMBLY" meta.json )
-          mv "$OUT_DIR/$ZIP" "$DIST/$ZIP"
-          test -f "$DIST/$ZIP"
+          : > "$DIST/versions.json"
 
-          {
-            echo "checksum=$(md5sum "$DIST/$ZIP" | cut -d' ' -f1)"
-            echo "timestamp=$TS"
-          } >> "$GITHUB_OUTPUT"
+          for ABI in $TARGET_ABIS; do
+            SHORT="${ABI%.*.*}"
+            ZIP="updatenotifier_${V}_${SHORT}.zip"
 
+            # Descriptive fields come from manifest.json, the single source of
+            # truth. --rawfile keeps the notes as data, never as shell.
+            jq --arg v "$V" --arg ts "$TS" --arg abi "$ABI" --arg dll "$ASSEMBLY" \
+               --rawfile log release-notes.txt '
+               .[0] | {
+                 category, description, guid, name, overview, owner,
+                 changelog: $log,
+                 targetAbi: $abi,
+                 timestamp: $ts,
+                 version: $v,
+                 status: "Active",
+                 autoUpdate: true,
+                 assemblies: [$dll]
+               }' manifest.json > "$OUT_DIR/meta.json"
+
+            # Create the archive with a relative name inside the output dir, then
+            # move it: the runner's zip mishandles an absolute archive path.
+            ( cd "$OUT_DIR" && rm -f "$ZIP" && zip -j "$ZIP" "$ASSEMBLY" meta.json )
+            mv "$OUT_DIR/$ZIP" "$DIST/$ZIP"
+            test -f "$DIST/$ZIP"
+
+            URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${ZIP}"
+            jq -n --arg v "$V" --arg abi "$ABI" --arg url "$URL" --arg ts "$TS" \
+                  --arg sum "$(md5sum "$DIST/$ZIP" | cut -d' ' -f1)" \
+                  --rawfile log release-notes.txt '
+                  {
+                    version: $v, changelog: $log, targetAbi: $abi,
+                    sourceUrl: $url, checksum: $sum, timestamp: $ts
+                  }' >> "$DIST/versions.json"
+          done
+
+      # This version's entries replace any already carrying it, so re-releasing
+      # a tag is idempotent. Older versions keep only their lowest-abi build,
+      # which every server that could install them can still install.
       - name: Update manifest.json
         env:
           V: ${{ steps.v.outputs.version }}
-          ZIP: ${{ steps.v.outputs.zip }}
-          TAG: ${{ steps.v.outputs.tag }}
-          SUM: ${{ steps.pkg.outputs.checksum }}
-          TS: ${{ steps.pkg.outputs.timestamp }}
         run: |
           set -euo pipefail
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${ZIP}"
-          jq --arg v "$V" --arg abi "$TARGET_ABI" --arg url "$URL" \
-             --arg sum "$SUM" --arg ts "$TS" --rawfile log release-notes.txt '
-             .[0].versions = ([{
-               version: $v, changelog: $log, targetAbi: $abi,
-               sourceUrl: $url, checksum: $sum, timestamp: $ts
-             }] + (.[0].versions | map(select(.version != $v))))' \
+          jq --arg v "$V" --slurpfile new "$GITHUB_WORKSPACE/dist/versions.json" '
+             .[0].versions =
+               ($new
+                + (.[0].versions
+                   | map(select(.version != $v))
+                   | group_by(.version)
+                   | map(sort_by(.targetAbi | split(".") | map(tonumber)) | first)
+                   | sort_by(.timestamp)
+                   | reverse))' \
              manifest.json > manifest.tmp
           mv manifest.tmp manifest.json
 
@@ -166,9 +178,8 @@ jobs:
           git diff --staged --quiet || git commit -m "chore(release): ${V}"
           git push origin main
 
-      - name: Attach the zip to the release
+      - name: Attach the zips to the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.v.outputs.tag }}
-          ZIP: ${{ steps.v.outputs.zip }}
-        run: gh release upload "$TAG" "$GITHUB_WORKSPACE/dist/$ZIP" --clobber
+        run: gh release upload "$TAG" "$GITHUB_WORKSPACE"/dist/*.zip --clobber

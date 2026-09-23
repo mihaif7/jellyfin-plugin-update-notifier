@@ -2,7 +2,7 @@
   {
     "guid": "b6a1c3f2-5d84-4e77-9d2a-7f1c8e4b3a91",
     "name": "Plugin Update Notifier",
-    "description": "Shows a notification badge on the admin's profile avatar and an entry in the profile menu when plugins have been installed or updated and the server needs a restart. The entry opens a dashboard page listing which plugins changed, their old and new versions, and each release's changelog.",
+    "description": "Shows a notification badge on the admin's profile avatar and an entry in the profile menu when plugins have been installed, updated or removed and the server needs a restart. The entry opens a dashboard page listing which plugins changed, their old and new versions, and each release's changelog, plus a history of what earlier restarts applied. Source, docs and issues: https://github.com/mihaif7/jellyfin-plugin-update-notifier",
     "overview": "Badges the admin avatar when plugins change and a restart is pending.",
     "owner": "mihaif7",
     "category": "General",
